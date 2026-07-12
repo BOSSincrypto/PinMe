@@ -50,43 +50,19 @@ npm audit --audit-level=high
 В репозитории настроены:
 
 - `CI`: lint, typecheck, production build и dependency audit web-прототипа; Android lint, unit tests и debug APK
-- `Android Release`: подписанный APK, проверка подписи, SHA-256 checksum и публикация GitHub Release
+- `Android Debug Release`: автоматически собираемый и проверяемый debug APK, SHA-256 checksum и публикация GitHub Release
 - Dependabot: еженедельные обновления npm, Gradle и GitHub Actions
 
 CI сохраняет debug APK как временный artifact на 14 дней. Этот artifact не является каналом обновлений.
 
-## Настройка подписи релизов
+## Автоматические APK
 
-Один раз создайте production keystore:
-
-```bash
-keytool -genkeypair -v \
-  -keystore pinme-release.jks \
-  -alias pinme \
-  -keyalg RSA \
-  -keysize 4096 \
-  -validity 10000
-```
-
-Создайте в GitHub Environment с именем `release` и добавьте secrets:
-
-- `ANDROID_KEYSTORE_BASE64`
-- `ANDROID_KEYSTORE_PASSWORD`
-- `ANDROID_KEY_ALIAS`
-- `ANDROID_KEY_PASSWORD`
-
-Получить Base64 без переноса строк:
-
-```bash
-base64 -i pinme-release.jks | tr -d "\n"
-```
-
-Keystore и его пароли нельзя коммитить. Храните независимую офлайн-копию: потеря production keystore сделает обновление уже установленных APK невозможным.
+Релизный workflow не использует production keystore: он публикует debug APK, подписанный временным debug-ключом GitHub Actions. Такой APK подходит для тестирования, но подпись меняется между запусками, поэтому новый APK не обновляет предыдущую установку.
 
 ## Автоматические релизы
 
-- изменение Android-кода в ветке `main` создаёт подписанный prerelease `build-…`
-- тег вида `v1.0.0` создаёт стабильный GitHub Release
+- изменение Android-кода в ветке `main` создаёт debug prerelease `build-…`
+- тег вида `v1.0.0` создаёт GitHub Release с debug APK
 - workflow можно запустить вручную через Actions
 
 ```bash
@@ -94,26 +70,14 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Все автоматические prerelease и стабильные APK подписываются одним production keystore и получают возрастающий `versionCode`.
-
-## Переход с debug APK
-
-Production-signed APK не обновит ранее установленный debug APK из-за другой подписи. Перед первым переходом:
-
-1. Создайте зашифрованную резервную копию в установленном приложении.
-2. Убедитесь, что помните резервный пароль.
-3. Удалите debug-версию.
-4. Установите production APK из GitHub Releases.
-5. Импортируйте зашифрованную копию.
-
-Удаление приложения стирает локальную базу, потому что системный backup намеренно отключён.
+Для production-дистрибуции понадобится отдельный keystore и настройка GitHub Environment secrets. Его нельзя коммитить или терять: только один и тот же production keystore позволяет обновлять уже установленные APK.
 
 ## Структура
 
 ```text
 android/    нативное Android-приложение
 src/        legacy web-прототип
-.github/    CI, подписанные релизы и Dependabot
+.github/    CI, автоматические debug-релизы и Dependabot
 ```
 
 ## Лицензия

@@ -1,4 +1,4 @@
-name: Android Release
+name: Android Debug Release
 
 on:
   push:
@@ -20,15 +20,9 @@ concurrency:
 
 jobs:
   release:
-    name: Signed APK
+    name: Debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    environment: release
-    env:
-      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -46,10 +40,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "$ANDROID_KEYSTORE_BASE64" || -z "$ANDROID_KEYSTORE_PASSWORD" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
-            echo "Не настроены секреты подписи Android для environment release" >&2
-            exit 1
-          fi
           version_code=$(($(date -u +%s) - 1577836800))
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             version_name="${GITHUB_REF_NAME#v}"
@@ -73,28 +63,21 @@ jobs:
             echo "release_title=$release_title"
             echo "prerelease=$prerelease"
           } >> "$GITHUB_OUTPUT"
-      - name: Decode keystore
-        shell: bash
-        run: |
-          set -euo pipefail
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/pinme-release.jks"
-          chmod 600 "$RUNNER_TEMP/pinme-release.jks"
-      - name: Build signed APK
+      - name: Build debug APK
         working-directory: android
         env:
           PINME_VERSION_CODE: ${{ steps.release.outputs.version_code }}
           PINME_VERSION_NAME: ${{ steps.release.outputs.version_name }}
-          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/pinme-release.jks
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon lintRelease testReleaseUnitTest assembleRelease
+          ./gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug
       - name: Verify and checksum APK
         id: artifact
         shell: bash
         run: |
           set -euo pipefail
-          source_apk="android/app/build/outputs/apk/release/app-release.apk"
-          output_apk="PinMe-${{ steps.release.outputs.version_name }}.apk"
+          source_apk="android/app/build/outputs/apk/debug/app-debug.apk"
+          output_apk="PinMe-${{ steps.release.outputs.version_name }}-debug.apk"
           cp "$source_apk" "$output_apk"
           apksigner_path=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
           "$apksigner_path" verify --verbose --print-certs "$output_apk"
@@ -108,13 +91,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ steps.release.outputs.release_tag }}" "${{ steps.artifact.outputs.apk }}" "${{ steps.artifact.outputs.checksum }}" --verify-tag --title "${{ steps.release.outputs.release_title }}" --generate-notes
+          gh release create "${{ steps.release.outputs.release_tag }}" "${{ steps.artifact.outputs.apk }}" "${{ steps.artifact.outputs.checksum }}" --verify-tag --title "${{ steps.release.outputs.release_title }}" --notes "Автоматическая debug-сборка PinMe. Подпись временная и не предназначена для обновления предыдущих APK."
       - name: Publish automatic prerelease
         if: steps.release.outputs.prerelease == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ steps.release.outputs.release_tag }}" "${{ steps.artifact.outputs.apk }}" "${{ steps.artifact.outputs.checksum }}" --target "$GITHUB_SHA" --title "${{ steps.release.outputs.release_title }}" --notes "Автоматическая подписанная сборка из commit $GITHUB_SHA." --prerelease
-      - name: Remove keystore
-        if: always()
-        run: rm -f "$RUNNER_TEMP/pinme-release.jks"
+          gh release create "${{ steps.release.outputs.release_tag }}" "${{ steps.artifact.outputs.apk }}" "${{ steps.artifact.outputs.checksum }}" --target "$GITHUB_SHA" --title "${{ steps.release.outputs.release_title }}" --notes "Автоматическая debug-сборка из commit $GITHUB_SHA. Подпись временная и не предназначена для обновления предыдущих APK." --prerelease
