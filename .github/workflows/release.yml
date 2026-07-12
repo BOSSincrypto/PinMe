@@ -1,0 +1,120 @@
+name: Android Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*.*.*"
+    paths:
+      - "android/**"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Signed APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: release
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+      - name: Setup Java
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - name: Prepare release metadata
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$ANDROID_KEYSTORE_BASE64" || -z "$ANDROID_KEYSTORE_PASSWORD" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
+            echo "Не настроены секреты подписи Android для environment release" >&2
+            exit 1
+          fi
+          version_code=$(($(date -u +%s) - 1577836800))
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            version_name="${GITHUB_REF_NAME#v}"
+            if [[ ! "$version_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+              echo "Тег релиза должен соответствовать vMAJOR.MINOR.PATCH" >&2
+              exit 1
+            fi
+            release_tag="$GITHUB_REF_NAME"
+            release_title="PinMe $version_name"
+            prerelease=false
+          else
+            version_name="1.0.${GITHUB_RUN_NUMBER}-dev.${GITHUB_RUN_ATTEMPT}"
+            release_tag="build-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+            release_title="PinMe build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+            prerelease=true
+          fi
+          {
+            echo "version_code=$version_code"
+            echo "version_name=$version_name"
+            echo "release_tag=$release_tag"
+            echo "release_title=$release_title"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+      - name: Decode keystore
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/pinme-release.jks"
+          chmod 600 "$RUNNER_TEMP/pinme-release.jks"
+      - name: Build signed APK
+        working-directory: android
+        env:
+          PINME_VERSION_CODE: ${{ steps.release.outputs.version_code }}
+          PINME_VERSION_NAME: ${{ steps.release.outputs.version_name }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/pinme-release.jks
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon lintRelease testReleaseUnitTest assembleRelease
+      - name: Verify and checksum APK
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_apk="android/app/build/outputs/apk/release/app-release.apk"
+          output_apk="PinMe-${{ steps.release.outputs.version_name }}.apk"
+          cp "$source_apk" "$output_apk"
+          apksigner_path=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
+          "$apksigner_path" verify --verbose --print-certs "$output_apk"
+          sha256sum "$output_apk" > "$output_apk.sha256"
+          {
+            echo "apk=$output_apk"
+            echo "checksum=$output_apk.sha256"
+          } >> "$GITHUB_OUTPUT"
+      - name: Publish stable release
+        if: steps.release.outputs.prerelease == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.release.outputs.release_tag }}" "${{ steps.artifact.outputs.apk }}" "${{ steps.artifact.outputs.checksum }}" --verify-tag --title "${{ steps.release.outputs.release_title }}" --generate-notes
+      - name: Publish automatic prerelease
+        if: steps.release.outputs.prerelease == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.release.outputs.release_tag }}" "${{ steps.artifact.outputs.apk }}" "${{ steps.artifact.outputs.checksum }}" --target "$GITHUB_SHA" --title "${{ steps.release.outputs.release_title }}" --notes "Автоматическая подписанная сборка из commit $GITHUB_SHA." --prerelease
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/pinme-release.jks"
