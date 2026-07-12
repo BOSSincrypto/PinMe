@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "e49e2f54dedc312a72a4a3737a16360b",
+    "identityHash": "58caab466c77b8b6cb5914f3765e7503",
     "entities": [
       {
         "tableName": "contacts",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `phone` TEXT NOT NULL, `email` TEXT NOT NULL, `address` TEXT NOT NULL, `workplace` TEXT NOT NULL, `position` TEXT NOT NULL, `source` TEXT NOT NULL, `helpInfo` TEXT NOT NULL, `birthday` INTEGER, `avatarUri` TEXT, `passwordHash` TEXT NOT NULL, `passwordSalt` TEXT NOT NULL, `passwordIterations` INTEGER NOT NULL, `encryptedData` TEXT NOT NULL, `categoryId` INTEGER, `isActive` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `phone` TEXT NOT NULL, `email` TEXT NOT NULL, `address` TEXT NOT NULL, `workplace` TEXT NOT NULL, `position` TEXT NOT NULL, `source` TEXT NOT NULL, `helpInfo` TEXT NOT NULL, `birthday` INTEGER, `avatarUri` TEXT, `passwordHash` TEXT NOT NULL, `passwordSalt` TEXT NOT NULL, `passwordIterations` INTEGER NOT NULL DEFAULT 100000, `encryptedData` TEXT NOT NULL, `categoryId` INTEGER, `isActive` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -90,7 +90,8 @@
             "fieldPath": "passwordIterations",
             "columnName": "passwordIterations",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": true,
+            "defaultValue": "100000"
           },
           {
             "fieldPath": "encryptedData",
@@ -497,7 +498,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e49e2f54dedc312a72a4a3737a16360b')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '58caab466c77b8b6cb5914f3765e7503')"
     ]
   }
 }

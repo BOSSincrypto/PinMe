@@ -1,6 +1,7 @@
 package com.securecontacts.app.data.model
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.securecontacts.app.data.database.Converters
@@ -23,6 +24,7 @@ data class Contact(
     val avatarUri: String? = null,
     val passwordHash: String = "",
     val passwordSalt: String = "",
+    @ColumnInfo(defaultValue = "100000")
     val passwordIterations: Int = CryptoManager.PASSWORD_HASH_ITERATIONS,
     val encryptedData: String = "",
     val categoryId: Long? = null,
