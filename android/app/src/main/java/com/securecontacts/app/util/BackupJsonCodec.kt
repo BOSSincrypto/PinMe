@@ -14,10 +14,12 @@ import com.securecontacts.app.data.model.Event
 import com.securecontacts.app.data.model.Reminder
 import com.securecontacts.app.data.model.SocialNetwork
 import com.securecontacts.app.data.model.Tag
+import com.securecontacts.app.security.CryptoManager
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
-internal const val BACKUP_FORMAT_VERSION = 1
+internal const val BACKUP_FORMAT_VERSION = 2
+private const val MIN_SUPPORTED_BACKUP_FORMAT_VERSION = 1
 
 data class ExportData(
     val version: Int = BACKUP_FORMAT_VERSION,
@@ -46,12 +48,14 @@ internal object BackupJsonCodec {
     private const val MAX_RELATIONS_PER_CONTACT = 10_000
     private const val MAX_SHORT_TEXT = 10_000
     private const val MAX_LONG_TEXT = 1_000_000
+    private const val MIN_TIMESTAMP = -62135596800000L
+    private const val MAX_TIMESTAMP = 253402300799999L
     private val colorPattern = Regex("^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")
     private val integerPattern = Regex("^-?[0-9]+$")
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
 
     fun encode(data: ExportData): String {
-        if (data.version != BACKUP_FORMAT_VERSION) {
+        if (data.version !in MIN_SUPPORTED_BACKUP_FORMAT_VERSION..BACKUP_FORMAT_VERSION) {
             throw BackupFormatException("Неподдерживаемая версия резервной копии")
         }
         val json = gson.toJson(data)
@@ -81,7 +85,7 @@ internal object BackupJsonCodec {
         }
         val root = rootElement.asJsonObject
         val version = root.requiredInt("version")
-        if (version != BACKUP_FORMAT_VERSION) {
+        if (version !in MIN_SUPPORTED_BACKUP_FORMAT_VERSION..BACKUP_FORMAT_VERSION) {
             throw BackupFormatException("Неподдерживаемая версия резервной копии: $version")
         }
         val exportDate = root.requiredLong("exportDate")
@@ -112,7 +116,7 @@ internal object BackupJsonCodec {
         ensureUniqueIds(contacts.map { it.contact.id }, "контактов")
 
         return ExportData(
-            version = version,
+            version = BACKUP_FORMAT_VERSION,
             exportDate = exportDate,
             contacts = contacts,
             tags = tags,
@@ -186,14 +190,28 @@ internal object BackupJsonCodec {
     }
 
     private fun parseContact(value: JsonObject, path: String): Contact {
-        val passwordHash = value.requiredText("passwordHash", path, 256, allowBlank = false)
-        val passwordSalt = value.requiredText("passwordSalt", path, 256, allowBlank = false)
-        validateBase64(passwordHash, 32, "$path.passwordHash")
-        validateBase64(passwordSalt, 32, "$path.passwordSalt")
+        val passwordHash = value.optionalText("passwordHash", path, 256).orEmpty()
+        val passwordSalt = value.optionalText("passwordSalt", path, 256).orEmpty()
+        if (passwordHash.isBlank() != passwordSalt.isBlank()) {
+            throw BackupFormatException("$path.passwordHash и $path.passwordSalt должны быть заполнены вместе")
+        }
+        if (passwordHash.isNotBlank()) {
+            validateBase64(passwordHash, 32, "$path.passwordHash")
+            validateBase64(passwordSalt, 32, "$path.passwordSalt")
+        }
+        val rawPasswordIterations = value.optionalLong("passwordIterations")
+        if (rawPasswordIterations != null && rawPasswordIterations !in 100000L..2000000L) {
+            throw BackupFormatException("$path.passwordIterations имеет недопустимое значение")
+        }
+        val passwordIterations = rawPasswordIterations?.toInt() ?: CryptoManager.PASSWORD_HASH_ITERATIONS
         val createdAt = value.requiredLong("createdAt")
         val updatedAt = value.requiredLong("updatedAt")
-        if (createdAt <= 0L || updatedAt < createdAt) {
+        if (!isTimestamp(createdAt) || !isTimestamp(updatedAt) || updatedAt < createdAt) {
             throw BackupFormatException("$path содержит некорректные временные метки")
+        }
+        val birthday = value.optionalLong("birthday")
+        if (birthday != null && !isTimestamp(birthday)) {
+            throw BackupFormatException("$path.birthday имеет недопустимое значение")
         }
         return Contact(
             id = value.requiredPositiveId("id", path),
@@ -205,11 +223,12 @@ internal object BackupJsonCodec {
             position = value.requiredText("position", path, MAX_SHORT_TEXT),
             source = value.requiredText("source", path, MAX_LONG_TEXT),
             helpInfo = value.requiredText("helpInfo", path, MAX_LONG_TEXT),
-            birthday = value.optionalLong("birthday"),
+            birthday = birthday,
             avatarUri = value.optionalText("avatarUri", path, MAX_LONG_TEXT),
             passwordHash = passwordHash,
             passwordSalt = passwordSalt,
-            encryptedData = value.requiredText("encryptedData", path, MAX_LONG_TEXT),
+            passwordIterations = passwordIterations,
+            encryptedData = value.optionalText("encryptedData", path, MAX_LONG_TEXT).orEmpty(),
             categoryId = value.optionalLong("categoryId"),
             isActive = value.requiredBoolean("isActive"),
             createdAt = createdAt,
@@ -219,11 +238,15 @@ internal object BackupJsonCodec {
 
     private fun parseEvent(value: JsonObject, path: String, contactId: Long): Event {
         requireContactId(value, path, contactId)
+        val date = value.requiredLong("date")
+        if (!isTimestamp(date)) {
+            throw BackupFormatException("$path.date имеет недопустимое значение")
+        }
         return Event(
             id = value.requiredPositiveId("id", path),
             contactId = contactId,
             title = value.requiredText("title", path, MAX_SHORT_TEXT, allowBlank = false),
-            date = value.requiredLong("date"),
+            date = date,
             comment = value.requiredText("comment", path, MAX_LONG_TEXT),
             isRecurring = value.requiredBoolean("isRecurring")
         )
@@ -232,14 +255,18 @@ internal object BackupJsonCodec {
     private fun parseReminder(value: JsonObject, path: String, contactId: Long): Reminder {
         requireContactId(value, path, contactId)
         val createdAt = value.requiredLong("createdAt")
-        if (createdAt <= 0L) {
+        if (!isTimestamp(createdAt)) {
             throw BackupFormatException("$path.createdAt имеет недопустимое значение")
+        }
+        val date = value.optionalLong("date")
+        if (date != null && !isTimestamp(date)) {
+            throw BackupFormatException("$path.date имеет недопустимое значение")
         }
         return Reminder(
             id = value.requiredPositiveId("id", path),
             contactId = contactId,
             title = value.requiredText("title", path, MAX_SHORT_TEXT, allowBlank = false),
-            date = value.optionalLong("date"),
+            date = date,
             comment = value.requiredText("comment", path, MAX_LONG_TEXT),
             isCompleted = value.requiredBoolean("isCompleted"),
             createdAt = createdAt
@@ -248,11 +275,13 @@ internal object BackupJsonCodec {
 
     private fun parseSocialNetwork(value: JsonObject, path: String, contactId: Long): SocialNetwork {
         requireContactId(value, path, contactId)
+        val url = value.requiredText("url", path, MAX_LONG_TEXT, allowBlank = false)
+        validateUrl(url, "$path.url")
         return SocialNetwork(
             id = value.requiredPositiveId("id", path),
             contactId = contactId,
             type = value.requiredText("type", path, MAX_SHORT_TEXT, allowBlank = false),
-            url = value.requiredText("url", path, MAX_LONG_TEXT, allowBlank = false),
+            url = url,
             username = value.requiredText("username", path, MAX_SHORT_TEXT)
         )
     }
@@ -271,13 +300,17 @@ internal object BackupJsonCodec {
     private fun parseConversation(value: JsonObject, path: String, contactId: Long): Conversation {
         requireContactId(value, path, contactId)
         val createdAt = value.requiredLong("createdAt")
-        if (createdAt <= 0L) {
+        if (!isTimestamp(createdAt)) {
             throw BackupFormatException("$path.createdAt имеет недопустимое значение")
+        }
+        val date = value.requiredLong("date")
+        if (!isTimestamp(date)) {
+            throw BackupFormatException("$path.date имеет недопустимое значение")
         }
         return Conversation(
             id = value.requiredPositiveId("id", path),
             contactId = contactId,
-            date = value.requiredLong("date"),
+            date = date,
             topic = value.requiredText("topic", path, MAX_LONG_TEXT, allowBlank = false),
             createdAt = createdAt
         )
@@ -294,6 +327,18 @@ internal object BackupJsonCodec {
             throw BackupFormatException("$path содержит недопустимый цвет")
         }
     }
+
+    private fun validateUrl(url: String, path: String) {
+        val scheme = url.substringBefore("://", missingDelimiterValue = "").lowercase()
+        if (scheme.isNotEmpty() && scheme !in setOf("http", "https")) {
+            throw BackupFormatException("$path содержит неподдерживаемую схему")
+        }
+        if (scheme.isNotEmpty() && url.substringAfter("://").substringBefore('/').isBlank()) {
+            throw BackupFormatException("$path не содержит адрес узла")
+        }
+    }
+
+    private fun isTimestamp(value: Long): Boolean = value in MIN_TIMESTAMP..MAX_TIMESTAMP
 
     private fun validateBase64(value: String, expectedSize: Int, path: String) {
         val decoded = try {

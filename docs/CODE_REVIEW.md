@@ -14,6 +14,9 @@
 - Включён `FLAG_SECURE`, приложение блокируется при уходе в фон, содержимое уведомлений обобщено.
 - Добавлены атомарная запись web-хранилища, проверка схемы и обработка quota/storage ошибок.
 - Добавлены CI, автоматические debug-релизы Android, SHA-256 checksum и Dependabot.
+- Добавлены отдельные plaintext export/import API с обязательной проверкой резервного пароля и предупреждением о содержимом файла.
+- Зашифрованный backup получил версионированный envelope и legacy decoder; JSON v1 мигрируется в текущую модель v2.
+- Добавлены Room migrations до schema v4, поле `passwordIterations` и тесты криптографии/формата резервной копии.
 
 ## Проверки
 
@@ -22,6 +25,7 @@
 - `npm run build`
 - `npm audit --audit-level=high`
 - `./gradlew lintDebug testDebugUnitTest assembleDebug`
+- `./gradlew testDebugUnitTest` выполняет 6 unit-тестов crypto/backup codec
 - `actionlint .github/workflows/*.yml`
 - Локальная release-сборка с временным keystore, `apksigner verify` и `zipalign`.
 
@@ -31,4 +35,6 @@
 - Уведомления Android создаются из текущего UI-потока; отдельный WorkManager-планировщик для фоновых напоминаний ещё не добавлен.
 - Автоматические APK подписываются временным debug-ключом; они предназначены для тестирования и не обновляют предыдущие APK.
 - Для production-дистрибуции нужно отдельно настроить постоянный keystore и secrets GitHub Environment.
-- В репозитории пока нет отдельного набора unit-тестов для миграций SQLCipher и криптографических сценариев; CI проверяет сборку и существующие тесты.
+- URI локальных аватаров остаются ссылками на исходное хранилище; перенос на другое устройство может потребовать выбрать аватары заново.
+- Android и web backup formats намеренно не смешиваются: Android остаётся основной реализацией.
+- SQLCipher migrations требуют проверки на реальном старом устройстве/fixture; CI проверяет миграционные SQL через компиляцию и выполняет unit-тесты portable backup-кодека.

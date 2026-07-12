@@ -41,7 +41,7 @@ fun HelpScreen(
     contactTags: Map<Long, List<Tag>>,
     isUnlocked: Boolean,
     onUnlockRequest: suspend (String) -> Boolean,
-    onSetPassword: (String) -> Unit,
+    onSetPassword: suspend (String) -> Boolean,
     hasPassword: Boolean,
     onContactClick: (Long) -> Unit,
     modifier: Modifier = Modifier
@@ -67,8 +67,11 @@ fun HelpScreen(
             SetHelpPasswordDialog(
                 onDismiss = { /* Cannot dismiss */ },
                 onConfirm = { password ->
-                    onSetPassword(password)
-                    showPasswordDialog = false
+                    scope.launch {
+                        if (onSetPassword(password)) {
+                            showPasswordDialog = false
+                        }
+                    }
                 }
             )
         } else {
@@ -402,7 +405,7 @@ fun SetHelpPasswordDialog(
         text = {
             Column {
                 Text(
-                    text = "Установите пароль для защиты вкладки 'Помощь'",
+                    text = "Установите пароль длиной не менее 8 символов для защиты вкладки 'Помощь'",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -438,13 +441,13 @@ fun SetHelpPasswordDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (password.isNotEmpty() && password == confirmPassword) {
+                    if (password.length >= 8 && password == confirmPassword) {
                         onConfirm(password)
                     } else {
                         showError = true
                     }
                 },
-                enabled = password.isNotEmpty() && confirmPassword.isNotEmpty()
+                enabled = password.length >= 8 && confirmPassword.isNotEmpty()
             ) {
                 Text("Установить")
             }

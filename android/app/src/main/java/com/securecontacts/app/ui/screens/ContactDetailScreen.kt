@@ -651,9 +651,12 @@ fun ContactDetailScreen(
                                                 } else {
                                                     parsedUri
                                                 }
-                                                val intent = Intent(Intent.ACTION_VIEW, targetUri)
-                                                if (intent.resolveActivity(context.packageManager) != null) {
-                                                    runCatching { context.startActivity(intent) }
+                                                val scheme = targetUri.scheme?.lowercase()
+                                                if ((scheme == "http" || scheme == "https") && !targetUri.host.isNullOrBlank()) {
+                                                    val intent = Intent(Intent.ACTION_VIEW, targetUri)
+                                                    if (intent.resolveActivity(context.packageManager) != null) {
+                                                        runCatching { context.startActivity(intent) }
+                                                    }
                                                 }
                                             }
                                         }

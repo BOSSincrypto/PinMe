@@ -67,6 +67,18 @@ private class UnlockSessionState {
     }
 }
 
+private fun Contact.isLegacyUnprotected(): Boolean = passwordHash.isBlank() && passwordSalt.isBlank()
+
+private fun Contact.maskPrivateFields(): Contact = copy(
+    phone = "",
+    email = "",
+    address = "",
+    workplace = "",
+    position = "",
+    birthday = null,
+    avatarUri = null
+)
+
 class MainActivity : FragmentActivity() {
     private lateinit var database: AppDatabase
     private lateinit var repository: ContactRepository
@@ -103,11 +115,10 @@ class MainActivity : FragmentActivity() {
         )
         preferencesManager = PreferencesManager(this)
         biometricManager = BiometricAuthManager(this)
-        exportImportManager = ExportImportManager(this, repository)
+        exportImportManager = ExportImportManager(this, repository, preferencesManager::verifyBackupPassword)
 
         setContent {
             val isDarkTheme by preferencesManager.isDarkThemeEnabled.collectAsState(initial = true)
-            val isFirstLaunch by preferencesManager.isFirstLaunch.collectAsState(initial = true)
             val hasBackupPassword by preferencesManager.hasBackupPassword.collectAsState(initial = false)
 
             SecureContactsTheme(darkTheme = isDarkTheme) {
@@ -115,13 +126,11 @@ class MainActivity : FragmentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    if (isFirstLaunch || !hasBackupPassword) {
+                    if (!hasBackupPassword) {
                         SetupBackupPasswordScreen(
                             onSetupComplete = { backupPassword, helpPassword ->
                                 lifecycleScope.launch {
-                                    preferencesManager.setBackupPassword(backupPassword)
-                                    preferencesManager.setHelpPassword(helpPassword)
-                                    preferencesManager.setFirstLaunchComplete()
+                                    preferencesManager.completeInitialSetup(backupPassword, helpPassword)
                                 }
                             }
                         )
@@ -215,11 +224,12 @@ private fun MainApp(
         if (searchQuery.isNotBlank()) {
             result = result.filter { contact ->
                 contact.name.contains(searchQuery, ignoreCase = true) ||
-                contact.phone.contains(searchQuery, ignoreCase = true) ||
-                contact.workplace.contains(searchQuery, ignoreCase = true) ||
-                contact.position.contains(searchQuery, ignoreCase = true) ||
-                (contact.id in unlockSession.unlockedContactIds &&
-                    contact.source.contains(searchQuery, ignoreCase = true))
+                (contact.id in unlockSession.unlockedContactIds && (
+                    contact.phone.contains(searchQuery, ignoreCase = true) ||
+                        contact.workplace.contains(searchQuery, ignoreCase = true) ||
+                        contact.position.contains(searchQuery, ignoreCase = true) ||
+                        contact.source.contains(searchQuery, ignoreCase = true)
+                    ))
             }
         }
 
@@ -230,6 +240,10 @@ private fun MainApp(
         }
 
         result
+    }
+    val displayContacts = filteredContacts.map { contact ->
+        if (contact.id in unlockSession.unlockedContactIds || contact.isLegacyUnprotected()) contact
+        else contact.maskPrivateFields()
     }
 
     // Reminders with contacts
@@ -308,7 +322,7 @@ private fun MainApp(
             // Contacts Screen
             composable(Screen.Contacts.route) {
                 ContactsScreen(
-                    contacts = filteredContacts,
+                    contacts = displayContacts,
                     allContacts = allContacts,
                     tags = tags,
                     contactTags = contactTags,
@@ -372,6 +386,7 @@ private fun MainApp(
 
             // Help Screen
             composable(Screen.Help.route) {
+                val context = LocalContext.current
                 var hasHelpPassword by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
@@ -392,10 +407,17 @@ private fun MainApp(
                         }
                     },
                     onSetPassword = { password ->
-                        scope.launch {
+                        if (password.length < 8) {
+                            Toast.makeText(context, "Пароль должен содержать минимум 8 символов", Toast.LENGTH_SHORT).show()
+                            false
+                        } else if (preferencesManager.verifyBackupPassword(password)) {
+                            Toast.makeText(context, "Пароль помощи должен отличаться от резервного", Toast.LENGTH_SHORT).show()
+                            false
+                        } else {
                             preferencesManager.setHelpPassword(password)
                             hasHelpPassword = true
                             unlockSession.unlockHelp()
+                            true
                         }
                     },
                     onContactClick = { contactId ->
@@ -410,32 +432,69 @@ private fun MainApp(
                 var showChangeBackupPasswordDialog by remember { mutableStateOf(false) }
                 var showChangeHelpPasswordDialog by remember { mutableStateOf(false) }
                 var showExportPasswordDialog by remember { mutableStateOf(false) }
-                var showImportPasswordDialog by remember { mutableStateOf(false) }
-                var pendingExportPassword by remember { mutableStateOf<String?>(null) }
-                var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
+                var showPlainExportPasswordDialog by remember { mutableStateOf(false) }
+                var showEncryptedImportPasswordDialog by remember { mutableStateOf(false) }
+                var showPlainImportPasswordDialog by remember { mutableStateOf(false) }
+                var pendingEncryptedExportPassword by remember { mutableStateOf<String?>(null) }
+                var pendingPlainExportPassword by remember { mutableStateOf<String?>(null) }
+                var pendingEncryptedImportUri by remember { mutableStateOf<Uri?>(null) }
+                var pendingPlainImportUri by remember { mutableStateOf<Uri?>(null) }
+
+                DisposableEffect(Unit) {
+                    onDispose {
+                        pendingEncryptedExportPassword = null
+                        pendingPlainExportPassword = null
+                        pendingEncryptedImportUri = null
+                        pendingPlainImportUri = null
+                    }
+                }
 
                 val exportEncryptedLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.CreateDocument("application/octet-stream")
                 ) { uri ->
                     activity.endActivityResultFlow()
                     if (uri == null) {
-                        pendingExportPassword = null
+                        pendingEncryptedExportPassword = null
                     } else {
                         val exportUri = uri
-                        pendingExportPassword?.let { password ->
+                        pendingEncryptedExportPassword?.let { password ->
                             scope.launch {
                                 try {
-                                    val success = exportImportManager.exportToUri(exportUri, encrypted = true, password = password)
+                                    val success = exportImportManager.exportEncryptedToUri(exportUri, password)
                                     if (success) {
                                         Toast.makeText(context, "Экспорт завершён успешно", Toast.LENGTH_SHORT).show()
                                     } else {
                                         Toast.makeText(context, "Ошибка экспорта", Toast.LENGTH_SHORT).show()
                                     }
                                 } catch (e: Exception) {
-                                    e.printStackTrace()
                                     Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
                                 }
-                                pendingExportPassword = null
+                                pendingEncryptedExportPassword = null
+                            }
+                        }
+                    }
+                }
+
+                val exportPlainLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.CreateDocument("application/json")
+                ) { uri ->
+                    activity.endActivityResultFlow()
+                    if (uri == null) {
+                        pendingPlainExportPassword = null
+                    } else {
+                        pendingPlainExportPassword?.let { password ->
+                            scope.launch {
+                                try {
+                                    val success = exportImportManager.exportPlainToUri(uri, password)
+                                    if (success) {
+                                        Toast.makeText(context, "Открытый экспорт завершён", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Ошибка экспорта", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                                pendingPlainExportPassword = null
                             }
                         }
                     }
@@ -446,8 +505,18 @@ private fun MainApp(
                 ) { uri ->
                     activity.endActivityResultFlow()
                     uri?.let { importUri ->
-                        pendingImportUri = importUri
-                        showImportPasswordDialog = true
+                        pendingEncryptedImportUri = importUri
+                        showEncryptedImportPasswordDialog = true
+                    }
+                }
+
+                val importPlainLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocument()
+                ) { uri ->
+                    activity.endActivityResultFlow()
+                    uri?.let { importUri ->
+                        pendingPlainImportUri = importUri
+                        showPlainImportPasswordDialog = true
                     }
                 }
 
@@ -467,9 +536,15 @@ private fun MainApp(
                         }
                     },
                     onExportEncrypted = { showExportPasswordDialog = true },
+                    onExportPlain = { showPlainExportPasswordDialog = true },
                     onImportEncrypted = {
                         activity.beginActivityResultFlow()
                         runCatching { importEncryptedLauncher.launch(arrayOf("*/*")) }
+                            .onFailure { activity.endActivityResultFlow() }
+                    },
+                    onImportPlain = {
+                        activity.beginActivityResultFlow()
+                        runCatching { importPlainLauncher.launch(arrayOf("application/json", "text/plain")) }
                             .onFailure { activity.endActivityResultFlow() }
                     },
                     onChangeBackupPassword = { showChangeBackupPasswordDialog = true },
@@ -513,8 +588,9 @@ private fun MainApp(
                         onDismiss = { showChangeHelpPasswordDialog = false },
                         onConfirm = { oldPassword, newPassword ->
                             scope.launch {
-                                val success = preferencesManager.changeHelpPassword(oldPassword, newPassword)
-                                if (success) {
+                                if (preferencesManager.verifyBackupPassword(newPassword)) {
+                                    Toast.makeText(context, "Пароль помощи должен отличаться от резервного", Toast.LENGTH_SHORT).show()
+                                } else if (preferencesManager.changeHelpPassword(oldPassword, newPassword)) {
                                     showChangeHelpPasswordDialog = false
                                     Toast.makeText(context, "Пароль изменён", Toast.LENGTH_SHORT).show()
                                 } else {
@@ -534,7 +610,7 @@ private fun MainApp(
                             scope.launch {
                                 if (preferencesManager.verifyBackupPassword(password)) {
                                     showExportPasswordDialog = false
-                                    pendingExportPassword = password
+                                    pendingEncryptedExportPassword = password
                                     val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
                                     val timestamp = dateFormat.format(Date())
                                     activity.beginActivityResultFlow()
@@ -542,7 +618,7 @@ private fun MainApp(
                                         exportEncryptedLauncher.launch("secure_contacts_backup_${timestamp}.enc")
                                     }.onFailure {
                                         activity.endActivityResultFlow()
-                                        pendingExportPassword = null
+                                        pendingEncryptedExportPassword = null
                                     }
                                 } else {
                                     Toast.makeText(context, "Неверный резервный пароль", Toast.LENGTH_SHORT).show()
@@ -552,19 +628,45 @@ private fun MainApp(
                     )
                 }
 
-                if (showImportPasswordDialog && pendingImportUri != null) {
+                if (showPlainExportPasswordDialog) {
+                    PasswordInputDialog(
+                        title = "Открытый экспорт",
+                        message = "Введите резервный пароль. Файл будет сохранён без шифрования и будет содержать персональные данные, хэши паролей контактов и дополнительные поля.",
+                        onDismiss = { showPlainExportPasswordDialog = false },
+                        onConfirm = { password ->
+                            scope.launch {
+                                if (preferencesManager.verifyBackupPassword(password)) {
+                                    showPlainExportPasswordDialog = false
+                                    pendingPlainExportPassword = password
+                                    val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                                    activity.beginActivityResultFlow()
+                                    runCatching {
+                                        exportPlainLauncher.launch("secure_contacts_backup_${timestamp}.json")
+                                    }.onFailure {
+                                        activity.endActivityResultFlow()
+                                        pendingPlainExportPassword = null
+                                    }
+                                } else {
+                                    Toast.makeText(context, "Неверный резервный пароль", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    )
+                }
+
+                if (showEncryptedImportPasswordDialog && pendingEncryptedImportUri != null) {
                     PasswordInputDialog(
                         title = "Импорт с шифрованием",
                         message = "Введите пароль для расшифровки файла",
                         onDismiss = {
-                            showImportPasswordDialog = false
-                            pendingImportUri = null
+                            showEncryptedImportPasswordDialog = false
+                            pendingEncryptedImportUri = null
                         },
                         onConfirm = { password ->
-                            pendingImportUri?.let { uri ->
+                            pendingEncryptedImportUri?.let { uri ->
                                 scope.launch {
                                     try {
-                                        val result = exportImportManager.importFromUri(uri, encrypted = true, password = password)
+                                        val result = exportImportManager.importEncryptedFromUri(uri, password)
                                         when (result) {
                                             is ImportResult.Success -> {
                                                 Toast.makeText(context, "Импортировано: ${result.contactsImported} контактов", Toast.LENGTH_SHORT).show()
@@ -574,11 +676,38 @@ private fun MainApp(
                                             }
                                         }
                                     } catch (e: Exception) {
-                                        e.printStackTrace()
                                         Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
                                     }
-                                    showImportPasswordDialog = false
-                                    pendingImportUri = null
+                                    showEncryptedImportPasswordDialog = false
+                                    pendingEncryptedImportUri = null
+                                }
+                            }
+                        }
+                    )
+                }
+
+                if (showPlainImportPasswordDialog && pendingPlainImportUri != null) {
+                    PasswordInputDialog(
+                        title = "Открытый импорт",
+                        message = "Введите текущий резервный пароль. Импорт разрешён только после проверки пароля, а файл не зашифрован.",
+                        onDismiss = {
+                            showPlainImportPasswordDialog = false
+                            pendingPlainImportUri = null
+                        },
+                        onConfirm = { password ->
+                            pendingPlainImportUri?.let { uri ->
+                                scope.launch {
+                                    try {
+                                        val result = exportImportManager.importPlainFromUri(uri, password)
+                                        when (result) {
+                                            is ImportResult.Success -> Toast.makeText(context, "Импортировано: ${result.contactsImported} контактов", Toast.LENGTH_SHORT).show()
+                                            is ImportResult.Error -> Toast.makeText(context, "Ошибка: ${result.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                    showPlainImportPasswordDialog = false
+                                    pendingPlainImportUri = null
                                 }
                             }
                         }
@@ -601,9 +730,15 @@ private fun MainApp(
                     contactWithDetails = repository.getContactWithDetails(contactId)
                 }
 
+                val contactIsUnlocked = contactId in unlockSession.unlockedContactIds ||
+                    contactWithDetails?.contact?.isLegacyUnprotected() == true
+                val displayContactWithDetails = contactWithDetails?.let { details ->
+                    if (contactIsUnlocked) details else details.copy(contact = details.contact.maskPrivateFields())
+                }
+
                 ContactDetailScreen(
-                    contactWithDetails = contactWithDetails,
-                    isUnlocked = contactId in unlockSession.unlockedContactIds,
+                    contactWithDetails = displayContactWithDetails,
+                    isUnlocked = contactIsUnlocked,
                     onBackClick = { navController.popBackStack() },
                     onEditClick = {
                         navController.navigate(Screen.EditContact.createRoute(contactId))
@@ -704,37 +839,39 @@ private fun MainApp(
                     allCategories = categories,
                     onSaveClick = { name, phone, email, address, workplace, position, source, helpInfo, birthday, avatarUri, password, categoryId, selectedTagIds, socialNetworks, events, reminders, customFields ->
                         scope.launch {
-                            val contactId = repository.createContact(
-                                name = name,
-                                phone = phone,
-                                email = email,
-                                address = address,
-                                workplace = workplace,
-                                position = position,
-                                source = source,
-                                helpInfo = helpInfo,
-                                birthday = birthday,
-                                avatarUri = avatarUri,
-                                password = password,
-                                categoryId = categoryId
-                            )
+                            repository.withTransaction {
+                                val contactId = repository.createContact(
+                                    name = name,
+                                    phone = phone,
+                                    email = email,
+                                    address = address,
+                                    workplace = workplace,
+                                    position = position,
+                                    source = source,
+                                    helpInfo = helpInfo,
+                                    birthday = birthday,
+                                    avatarUri = avatarUri,
+                                    password = password,
+                                    categoryId = categoryId
+                                )
 
-                            repository.setContactTags(contactId, selectedTagIds)
+                                repository.setContactTags(contactId, selectedTagIds)
 
-                            socialNetworks.forEach { sn ->
-                                repository.createSocialNetwork(contactId, sn.type, sn.url, sn.username)
-                            }
+                                socialNetworks.forEach { sn ->
+                                    repository.createSocialNetwork(contactId, sn.type, sn.url, sn.username)
+                                }
 
-                            events.forEach { event ->
-                                repository.createEvent(contactId, event.title, event.date, event.comment, event.isRecurring)
-                            }
+                                events.forEach { event ->
+                                    repository.createEvent(contactId, event.title, event.date, event.comment, event.isRecurring)
+                                }
 
-                            reminders.forEach { reminder ->
-                                repository.createReminder(contactId, reminder.title, reminder.date, reminder.comment)
-                            }
+                                reminders.forEach { reminder ->
+                                    repository.createReminder(contactId, reminder.title, reminder.date, reminder.comment)
+                                }
 
-                            customFields.forEach { cf ->
-                                repository.createCustomField(contactId, cf.fieldName, cf.fieldValue, cf.isEncrypted)
+                                customFields.forEach { cf ->
+                                    repository.createCustomField(contactId, cf.fieldName, cf.fieldValue, cf.isEncrypted)
+                                }
                             }
 
                             navController.popBackStack()
@@ -755,16 +892,20 @@ private fun MainApp(
                 arguments = listOf(navArgument("contactId") { type = NavType.LongType })
             ) { backStackEntry ->
                 val contactId = backStackEntry.arguments?.getLong("contactId") ?: return@composable
-                if (contactId !in unlockSession.unlockedContactIds) {
-                    LaunchedEffect(contactId) {
-                        navController.popBackStack()
-                    }
-                    return@composable
-                }
                 var contactWithDetails by remember { mutableStateOf<ContactWithDetails?>(null) }
 
                 LaunchedEffect(contactId) {
                     contactWithDetails = repository.getContactWithDetails(contactId)
+                }
+
+                val legacyContactIsUnlocked = contactWithDetails?.contact?.let {
+                    it.isLegacyUnprotected()
+                } == true
+                if (contactId !in unlockSession.unlockedContactIds && !legacyContactIsUnlocked) {
+                    LaunchedEffect(contactId) {
+                        navController.popBackStack()
+                    }
+                    return@composable
                 }
 
                 CreateEditContactScreen(
@@ -774,69 +915,71 @@ private fun MainApp(
                     allCategories = categories,
                     onSaveClick = { name, phone, email, address, workplace, position, source, helpInfo, birthday, avatarUri, newPassword, categoryId, selectedTagIds, socialNetworks, events, reminders, customFields ->
                         scope.launch {
-                            contactWithDetails?.contact?.let { existingContact ->
-                                repository.updateContact(
-                                    existingContact.copy(
-                                        name = name,
-                                        phone = phone,
-                                        email = email,
-                                        address = address,
-                                        workplace = workplace,
-                                        position = position,
-                                        source = source,
-                                        helpInfo = helpInfo,
-                                        birthday = birthday,
-                                        avatarUri = avatarUri,
-                                        categoryId = categoryId
-                                    )
-                                )
-
-                                // Update password if a new one was provided
-                                if (newPassword.isNotBlank()) {
-                                    repository.updateContactPassword(contactId, newPassword)
-                                }
-
-                                repository.setContactTags(contactId, selectedTagIds)
-
-                                // Update social networks
-                                repository.setSocialNetworks(contactId, socialNetworks.map {
-                                    SocialNetwork(it.id, contactId, it.type, it.url, it.username)
-                                })
-
-                                // Update events - delete old and create new
-                                contactWithDetails?.events?.forEach { repository.deleteEvent(it) }
-                                events.forEach { event ->
-                                    repository.createEvent(contactId, event.title, event.date, event.comment, event.isRecurring)
-                                }
-
-                                val existingReminders = contactWithDetails?.reminders.orEmpty().associateBy { it.id }
-                                val retainedReminderIds = reminders.mapNotNull { input ->
-                                    input.id.takeIf { it > 0 && it in existingReminders }
-                                }.toSet()
-                                existingReminders.values
-                                    .filterNot { it.id in retainedReminderIds }
-                                    .forEach { repository.deleteReminder(it) }
-                                reminders.forEach { reminder ->
-                                    val existingReminder = existingReminders[reminder.id]
-                                    if (existingReminder == null) {
-                                        repository.createReminder(contactId, reminder.title, reminder.date, reminder.comment)
-                                    } else {
-                                        repository.updateReminder(
-                                            existingReminder.copy(
-                                                title = reminder.title,
-                                                date = reminder.date,
-                                                comment = reminder.comment,
-                                                isCompleted = reminder.isCompleted,
-                                                createdAt = reminder.createdAt
-                                            )
+                            repository.withTransaction {
+                                contactWithDetails?.contact?.let { existingContact ->
+                                    repository.updateContact(
+                                        existingContact.copy(
+                                            name = name,
+                                            phone = phone,
+                                            email = email,
+                                            address = address,
+                                            workplace = workplace,
+                                            position = position,
+                                            source = source,
+                                            helpInfo = helpInfo,
+                                            birthday = birthday,
+                                            avatarUri = avatarUri,
+                                            categoryId = categoryId
                                         )
-                                    }
-                                }
+                                    )
 
-                                // Update custom fields
-                                repository.setCustomFields(contactId, customFields.map {
-                                    CustomField(it.id, contactId, it.fieldName, it.fieldValue, it.isEncrypted)
-                                })
+                                    // Update password if a new one was provided
+                                    if (newPassword.isNotBlank()) {
+                                        repository.updateContactPassword(contactId, newPassword)
+                                    }
+
+                                    repository.setContactTags(contactId, selectedTagIds)
+
+                                    // Update social networks
+                                    repository.setSocialNetworks(contactId, socialNetworks.map {
+                                        SocialNetwork(it.id, contactId, it.type, it.url, it.username)
+                                    })
+
+                                    // Update events - delete old and create new
+                                    contactWithDetails?.events?.forEach { repository.deleteEvent(it) }
+                                    events.forEach { event ->
+                                        repository.createEvent(contactId, event.title, event.date, event.comment, event.isRecurring)
+                                    }
+
+                                    val existingReminders = contactWithDetails?.reminders.orEmpty().associateBy { it.id }
+                                    val retainedReminderIds = reminders.mapNotNull { input ->
+                                        input.id.takeIf { it > 0 && it in existingReminders }
+                                    }.toSet()
+                                    existingReminders.values
+                                        .filterNot { it.id in retainedReminderIds }
+                                        .forEach { repository.deleteReminder(it) }
+                                    reminders.forEach { reminder ->
+                                        val existingReminder = existingReminders[reminder.id]
+                                        if (existingReminder == null) {
+                                            repository.createReminder(contactId, reminder.title, reminder.date, reminder.comment)
+                                        } else {
+                                            repository.updateReminder(
+                                                existingReminder.copy(
+                                                    title = reminder.title,
+                                                    date = reminder.date,
+                                                    comment = reminder.comment,
+                                                    isCompleted = reminder.isCompleted,
+                                                    createdAt = reminder.createdAt
+                                                )
+                                            )
+                                        }
+                                    }
+
+                                    // Update custom fields
+                                    repository.setCustomFields(contactId, customFields.map {
+                                        CustomField(it.id, contactId, it.fieldName, it.fieldValue, it.isEncrypted)
+                                    })
+                                }
                             }
 
                             navController.popBackStack()
@@ -867,9 +1010,14 @@ private fun MainApp(
                 val visibleSearchResults = searchResults.filter { contact ->
                     contact.id in unlockSession.unlockedContactIds ||
                         contact.name.contains(localSearchQuery, ignoreCase = true) ||
-                        contact.phone.contains(localSearchQuery, ignoreCase = true) ||
-                        contact.workplace.contains(localSearchQuery, ignoreCase = true) ||
-                        contact.position.contains(localSearchQuery, ignoreCase = true)
+                        (contact.id in unlockSession.unlockedContactIds && (
+                            contact.phone.contains(localSearchQuery, ignoreCase = true) ||
+                                contact.workplace.contains(localSearchQuery, ignoreCase = true) ||
+                                contact.position.contains(localSearchQuery, ignoreCase = true)
+                            ))
+                }.map { contact ->
+                    if (contact.id in unlockSession.unlockedContactIds || contact.isLegacyUnprotected()) contact
+                    else contact.maskPrivateFields()
                 }
 
                 SearchScreen(

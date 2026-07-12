@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.securecontacts.app.data.model.Category
 import com.securecontacts.app.data.model.Contact
 import com.securecontacts.app.data.model.ContactTag
@@ -38,7 +40,7 @@ import java.io.FileOutputStream
         Conversation::class,
         SearchHistory::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -80,6 +82,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val factoryKey = keyRecord.key.copyOf()
                 return Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME)
                     .openHelperFactory(SupportOpenHelperFactory(factoryKey))
+                    .addMigrations(MIGRATION_1_4, MIGRATION_2_4, MIGRATION_3_4)
                     .build()
             } finally {
                 keyRecord.key.fill(0)
@@ -233,6 +236,113 @@ abstract class AppDatabase : RoomDatabase() {
             listOf("-wal", "-shm", "-journal").forEach { suffix ->
                 File(databaseFile.path + suffix).delete()
             }
+        }
+
+        private val MIGRATION_1_4 = object : Migration(1, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                migrateLegacySchema(database)
+            }
+        }
+
+        private val MIGRATION_2_4 = object : Migration(2, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                migrateLegacySchema(database)
+            }
+        }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                if (database.hasTable("contacts")) {
+                    database.addColumnIfMissing("contacts", "passwordIterations INTEGER NOT NULL DEFAULT 100000")
+                } else {
+                    migrateLegacySchema(database)
+                }
+            }
+        }
+
+        private fun migrateLegacySchema(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS `contacts` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL DEFAULT '', `phone` TEXT NOT NULL DEFAULT '', `email` TEXT NOT NULL DEFAULT '', `address` TEXT NOT NULL DEFAULT '', `workplace` TEXT NOT NULL DEFAULT '', `position` TEXT NOT NULL DEFAULT '', `source` TEXT NOT NULL DEFAULT '', `helpInfo` TEXT NOT NULL DEFAULT '', `birthday` INTEGER, `avatarUri` TEXT, `passwordHash` TEXT NOT NULL DEFAULT '', `passwordSalt` TEXT NOT NULL DEFAULT '', `passwordIterations` INTEGER NOT NULL DEFAULT 100000, `encryptedData` TEXT NOT NULL DEFAULT '', `categoryId` INTEGER, `isActive` INTEGER NOT NULL DEFAULT 1, `createdAt` INTEGER NOT NULL DEFAULT 0, `updatedAt` INTEGER NOT NULL DEFAULT 0)"
+            )
+            database.addColumnIfMissing("contacts", "phone TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("contacts", "email TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("contacts", "address TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("contacts", "workplace TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("contacts", "position TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("contacts", "source TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("contacts", "helpInfo TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("contacts", "birthday INTEGER")
+            database.addColumnIfMissing("contacts", "avatarUri TEXT")
+            database.addColumnIfMissing("contacts", "passwordHash TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("contacts", "passwordSalt TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("contacts", "passwordIterations INTEGER NOT NULL DEFAULT 100000")
+            database.addColumnIfMissing("contacts", "encryptedData TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("contacts", "categoryId INTEGER")
+            database.addColumnIfMissing("contacts", "isActive INTEGER NOT NULL DEFAULT 1")
+            database.addColumnIfMissing("contacts", "createdAt INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("contacts", "updatedAt INTEGER NOT NULL DEFAULT 0")
+            database.execSQL("UPDATE `contacts` SET `createdAt` = CASE WHEN `createdAt` <= 0 THEN strftime('%s','now') * 1000 ELSE `createdAt` END, `updatedAt` = CASE WHEN `updatedAt` <= 0 THEN strftime('%s','now') * 1000 ELSE `updatedAt` END")
+
+            database.execSQL("CREATE TABLE IF NOT EXISTS `tags` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL DEFAULT '', `color` TEXT NOT NULL DEFAULT '#2196F3')")
+            database.execSQL("CREATE TABLE IF NOT EXISTS `contact_tags` (`contactId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL, PRIMARY KEY(`contactId`, `tagId`))")
+            database.execSQL("CREATE TABLE IF NOT EXISTS `categories` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL DEFAULT '', `color` TEXT NOT NULL DEFAULT '#4CAF50')")
+            database.execSQL("CREATE TABLE IF NOT EXISTS `events` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `contactId` INTEGER NOT NULL, `title` TEXT NOT NULL DEFAULT '', `date` INTEGER NOT NULL DEFAULT 0, `comment` TEXT NOT NULL DEFAULT '', `isRecurring` INTEGER NOT NULL DEFAULT 0)")
+            database.execSQL("CREATE TABLE IF NOT EXISTS `reminders` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `contactId` INTEGER NOT NULL, `title` TEXT NOT NULL DEFAULT '', `date` INTEGER, `comment` TEXT NOT NULL DEFAULT '', `isCompleted` INTEGER NOT NULL DEFAULT 0, `createdAt` INTEGER NOT NULL DEFAULT 0)")
+            database.execSQL("CREATE TABLE IF NOT EXISTS `social_networks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `contactId` INTEGER NOT NULL, `type` TEXT NOT NULL DEFAULT '', `url` TEXT NOT NULL DEFAULT '', `username` TEXT NOT NULL DEFAULT '')")
+            database.execSQL("CREATE TABLE IF NOT EXISTS `custom_fields` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `contactId` INTEGER NOT NULL, `fieldName` TEXT NOT NULL DEFAULT '', `fieldValue` TEXT NOT NULL DEFAULT '', `isEncrypted` INTEGER NOT NULL DEFAULT 0)")
+            database.execSQL("CREATE TABLE IF NOT EXISTS `conversations` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `contactId` INTEGER NOT NULL, `date` INTEGER NOT NULL DEFAULT 0, `topic` TEXT NOT NULL DEFAULT '', `createdAt` INTEGER NOT NULL DEFAULT 0)")
+            database.execSQL("CREATE TABLE IF NOT EXISTS `search_history` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `query` TEXT NOT NULL DEFAULT '', `timestamp` INTEGER NOT NULL DEFAULT 0)")
+
+            database.addColumnIfMissing("tags", "name TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("tags", "color TEXT NOT NULL DEFAULT '#2196F3'")
+            database.addColumnIfMissing("contact_tags", "contactId INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("contact_tags", "tagId INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("categories", "name TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("categories", "color TEXT NOT NULL DEFAULT '#4CAF50'")
+            database.addColumnIfMissing("events", "contactId INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("events", "title TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("events", "date INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("events", "comment TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("events", "isRecurring INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("reminders", "contactId INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("reminders", "title TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("reminders", "date INTEGER")
+            database.addColumnIfMissing("reminders", "comment TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("reminders", "isCompleted INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("reminders", "createdAt INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("social_networks", "contactId INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("social_networks", "type TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("social_networks", "url TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("social_networks", "username TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("custom_fields", "contactId INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("custom_fields", "fieldName TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("custom_fields", "fieldValue TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("custom_fields", "isEncrypted INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("conversations", "contactId INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("conversations", "date INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("conversations", "topic TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("conversations", "createdAt INTEGER NOT NULL DEFAULT 0")
+            database.addColumnIfMissing("search_history", "query TEXT NOT NULL DEFAULT ''")
+            database.addColumnIfMissing("search_history", "timestamp INTEGER NOT NULL DEFAULT 0")
+            database.execSQL("UPDATE `reminders` SET `createdAt` = CASE WHEN `createdAt` <= 0 THEN strftime('%s','now') * 1000 ELSE `createdAt` END")
+            database.execSQL("UPDATE `conversations` SET `createdAt` = CASE WHEN `createdAt` <= 0 THEN strftime('%s','now') * 1000 ELSE `createdAt` END")
+        }
+
+        private fun SupportSQLiteDatabase.hasTable(table: String): Boolean {
+            query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1", arrayOf(table)).use { cursor ->
+                return cursor.moveToFirst()
+            }
+        }
+
+        private fun SupportSQLiteDatabase.addColumnIfMissing(table: String, definition: String) {
+            val column = definition.substringBefore(' ').trim('`')
+            query("PRAGMA table_info(`$table`)").use { cursor ->
+                val nameIndex = cursor.getColumnIndex("name")
+                while (cursor.moveToNext()) {
+                    if (cursor.getString(nameIndex) == column) return
+                }
+            }
+            execSQL("ALTER TABLE `$table` ADD COLUMN $definition")
         }
     }
 }

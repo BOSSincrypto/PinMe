@@ -24,7 +24,9 @@ fun SettingsScreen(
     onDarkThemeChange: (Boolean) -> Unit,
     onBiometricChange: (Boolean) -> Unit,
     onExportEncrypted: () -> Unit,
+    onExportPlain: () -> Unit,
     onImportEncrypted: () -> Unit,
+    onImportPlain: () -> Unit,
     onChangeBackupPassword: () -> Unit,
     onChangeHelpPassword: () -> Unit,
     onManageTags: () -> Unit,
@@ -439,6 +441,37 @@ fun SettingsScreen(
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = onExportPlain)
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Открытый экспорт",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = "JSON без шифрования, доступен после проверки резервного пароля",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                            Icon(
+                                Icons.Default.FileDownload,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
@@ -490,6 +523,37 @@ fun SettingsScreen(
                                 Icons.Default.FileUpload,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = onImportPlain)
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Открытый импорт",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = "Импорт JSON без шифрования после проверки резервного пароля",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                            Icon(
+                                Icons.Default.FileUpload,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
                             )
                         }
                     }
@@ -636,7 +700,7 @@ fun ChangePasswordDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(oldPassword, newPassword) },
-                enabled = oldPassword.isNotBlank() && newPassword.isNotBlank() && newPassword == confirmPassword
+                enabled = oldPassword.isNotBlank() && newPassword.length >= 8 && newPassword == confirmPassword
             ) {
                 Text("Изменить")
             }

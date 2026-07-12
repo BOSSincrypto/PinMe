@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.securecontacts.app.data.database.Converters
+import com.securecontacts.app.security.CryptoManager
 
 @Entity(tableName = "contacts")
 @TypeConverters(Converters::class)
@@ -22,6 +23,7 @@ data class Contact(
     val avatarUri: String? = null,
     val passwordHash: String = "",
     val passwordSalt: String = "",
+    val passwordIterations: Int = CryptoManager.PASSWORD_HASH_ITERATIONS,
     val encryptedData: String = "",
     val categoryId: Long? = null,
     val isActive: Boolean = true,

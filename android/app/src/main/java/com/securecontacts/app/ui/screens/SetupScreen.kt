@@ -26,8 +26,8 @@ fun SetupBackupPasswordScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var currentStep by remember { mutableStateOf(0) }
 
-    val isBackupPasswordValid = backupPassword.isNotBlank() && backupPassword == confirmBackupPassword
-    val isHelpPasswordValid = helpPassword.isNotBlank() && helpPassword == confirmHelpPassword
+    val isBackupPasswordValid = backupPassword.length >= 8 && backupPassword == confirmBackupPassword
+    val isHelpPasswordValid = helpPassword.length >= 8 && helpPassword == confirmHelpPassword && helpPassword != backupPassword
 
     Column(
         modifier = modifier
@@ -98,7 +98,7 @@ fun SetupBackupPasswordScreen(
                     }
 
                     Text(
-                        text = "Этот пароль используется для зашифрованного экспорта/импорта и экстренного доступа к данным.",
+                        text = "Минимум 8 символов. Пароль используется для зашифрованного экспорта/импорта и экстренного доступа к данным.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -159,7 +159,7 @@ fun SetupBackupPasswordScreen(
                     }
 
                     Text(
-                        text = "Это вторичный пароль для помощи. Сделайте его отличным от резервного пароля.",
+                        text = "Минимум 8 символов. Это вторичный пароль для помощи, он должен отличаться от резервного.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -191,6 +191,8 @@ fun SetupBackupPasswordScreen(
                         isError = confirmHelpPassword.isNotEmpty() && helpPassword != confirmHelpPassword,
                         supportingText = if (confirmHelpPassword.isNotEmpty() && helpPassword != confirmHelpPassword) {
                             { Text("Пароли не совпадают") }
+                        } else if (helpPassword.isNotEmpty() && helpPassword == backupPassword) {
+                            { Text("Пароль помощи должен отличаться от резервного") }
                         } else null
                     )
 

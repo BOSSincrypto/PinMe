@@ -128,7 +128,15 @@ class ContactRepository(
     }
 
     fun verifyContactPassword(contact: Contact, password: String): Boolean {
-        return CryptoManager.verifyPassword(password, contact.passwordSalt, contact.passwordHash)
+        if (contact.passwordHash.isBlank() && contact.passwordSalt.isBlank()) {
+            return true
+        }
+        return CryptoManager.verifyPassword(
+            password,
+            contact.passwordSalt,
+            contact.passwordHash,
+            contact.passwordIterations
+        )
     }
 
     suspend fun changeContactPassword(contactId: Long, oldPassword: String, newPassword: String): Boolean {
@@ -140,6 +148,7 @@ class ContactRepository(
             contactDao.updateContact(contact.copy(
                 passwordHash = newHash,
                 passwordSalt = newSalt,
+                passwordIterations = CryptoManager.PASSWORD_HASH_ITERATIONS,
                 updatedAt = System.currentTimeMillis()
             ))
             true
@@ -154,6 +163,7 @@ class ContactRepository(
             contactDao.updateContact(contact.copy(
                 passwordHash = newHash,
                 passwordSalt = newSalt,
+                passwordIterations = CryptoManager.PASSWORD_HASH_ITERATIONS,
                 updatedAt = System.currentTimeMillis()
             ))
             true
@@ -321,7 +331,22 @@ class ContactRepository(
         customFields: List<CustomField>,
         conversations: List<Conversation>
     ): Long = database.withTransaction {
-        val contactId = contactDao.insertContact(contact.copy(id = 0, categoryId = categoryId))
+        val existing = contactDao.getContactById(contact.id)
+        val replaceExisting = existing != null &&
+            existing.name.trim().equals(contact.name.trim(), ignoreCase = true) &&
+            existing.phone.trim() == contact.phone.trim()
+        val contactId = if (replaceExisting) {
+            tagDao.deleteContactTags(contact.id)
+            eventDao.deleteEventsForContact(contact.id)
+            reminderDao.deleteRemindersForContact(contact.id)
+            socialNetworkDao.deleteSocialNetworksForContact(contact.id)
+            customFieldDao.deleteCustomFieldsForContact(contact.id)
+            conversationDao.deleteConversationsForContact(contact.id)
+            contactDao.updateContact(contact.copy(id = contact.id, categoryId = categoryId))
+            contact.id
+        } else {
+            contactDao.insertContact(contact.copy(id = 0, categoryId = categoryId))
+        }
         tagIds.forEach { tagId ->
             tagDao.insertContactTag(ContactTag(contactId, tagId))
         }

@@ -11,7 +11,8 @@ import java.io.ByteArrayOutputStream
 
 class ExportImportManager(
     private val context: Context,
-    private val repository: ContactRepository
+    private val repository: ContactRepository,
+    private val verifyBackupPassword: suspend (String) -> Boolean
 ) {
     suspend fun exportToJson(): String = withContext(Dispatchers.IO) {
         repository.withTransaction {
@@ -45,17 +46,27 @@ class ExportImportManager(
         CryptoManager.encryptWithPassword(exportToJson(), password)
     }
 
-    suspend fun exportToUri(uri: Uri, encrypted: Boolean, password: String? = null): Boolean =
+    suspend fun exportEncryptedToUri(uri: Uri, password: String): Boolean =
         withContext(Dispatchers.IO) {
-            if (!encrypted || password.isNullOrBlank()) {
+            if (!isBackupPasswordValid(password)) {
                 return@withContext false
             }
             try {
                 val data = exportEncrypted(password)
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    outputStream.write(data.toByteArray(Charsets.UTF_8))
-                } ?: return@withContext false
-                true
+                writeToUri(uri, data)
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                false
+            }
+        }
+
+    suspend fun exportPlainToUri(uri: Uri, password: String): Boolean =
+        withContext(Dispatchers.IO) {
+            if (!isBackupPasswordValid(password)) {
+                return@withContext false
+            }
+            try {
+                writeToUri(uri, exportToJson())
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 false
@@ -129,10 +140,10 @@ class ExportImportManager(
             }
         }
 
-    suspend fun importFromUri(uri: Uri, encrypted: Boolean, password: String? = null): ImportResult =
+    suspend fun importEncryptedFromUri(uri: Uri, password: String): ImportResult =
         withContext(Dispatchers.IO) {
-            if (!encrypted || password.isNullOrBlank()) {
-                return@withContext ImportResult.Error("Разрешены только зашифрованные резервные копии")
+            if (!isPasswordSane(password)) {
+                return@withContext ImportResult.Error("Неверный резервный пароль")
             }
             try {
                 val data = readLimited(uri)
@@ -143,6 +154,33 @@ class ExportImportManager(
                 ImportResult.Error(error.message ?: "Не удалось прочитать резервную копию")
             }
         }
+
+    suspend fun importPlainFromUri(uri: Uri, password: String): ImportResult =
+        withContext(Dispatchers.IO) {
+            if (!isBackupPasswordValid(password)) {
+                return@withContext ImportResult.Error("Неверный резервный пароль")
+            }
+            try {
+                importFromJson(readLimited(uri))
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                ImportResult.Error(error.message ?: "Не удалось прочитать резервную копию")
+            }
+        }
+
+    private suspend fun isBackupPasswordValid(password: String): Boolean =
+        isPasswordSane(password) && verifyBackupPassword(password)
+
+    private fun isPasswordSane(password: String): Boolean =
+        password.isNotBlank() && password.length <= 1024
+
+    private fun writeToUri(uri: Uri, data: String): Boolean {
+        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+            outputStream.write(data.toByteArray(Charsets.UTF_8))
+        } ?: return false
+        return true
+    }
 
     private fun readLimited(uri: Uri): String {
         val limit = BackupJsonCodec.MAX_JSON_BYTES * 2

@@ -52,7 +52,25 @@ class PreferencesManager(private val context: Context) {
         }
     }
 
+    suspend fun completeInitialSetup(backupPassword: String, helpPassword: String) {
+        require(backupPassword.length >= 8)
+        require(helpPassword.length >= 8)
+        require(backupPassword != helpPassword)
+        val backupSalt = CryptoManager.generateSalt()
+        val helpSalt = CryptoManager.generateSalt()
+        val backupHash = CryptoManager.hashPassword(backupPassword, backupSalt)
+        val helpHash = CryptoManager.hashPassword(helpPassword, helpSalt)
+        context.dataStore.edit { prefs ->
+            prefs[BACKUP_PASSWORD_HASH] = backupHash
+            prefs[BACKUP_PASSWORD_SALT] = backupSalt
+            prefs[HELP_PASSWORD_HASH] = helpHash
+            prefs[HELP_PASSWORD_SALT] = helpSalt
+            prefs[FIRST_LAUNCH] = false
+        }
+    }
+
     suspend fun setBackupPassword(password: String) {
+        require(password.length >= 8)
         val salt = CryptoManager.generateSalt()
         val hash = CryptoManager.hashPassword(password, salt)
         context.dataStore.edit { prefs ->
@@ -62,6 +80,7 @@ class PreferencesManager(private val context: Context) {
     }
 
     suspend fun verifyBackupPassword(password: String): Boolean {
+        if (password.isBlank() || password.length > 1024) return false
         val prefs = context.dataStore.data.first()
         val hash = prefs[BACKUP_PASSWORD_HASH]
         val salt = prefs[BACKUP_PASSWORD_SALT]
@@ -79,6 +98,8 @@ class PreferencesManager(private val context: Context) {
     }
 
     suspend fun setHelpPassword(password: String) {
+        require(password.length >= 8)
+        check(!verifyBackupPassword(password)) { "Пароль помощи должен отличаться от резервного" }
         val salt = CryptoManager.generateSalt()
         val hash = CryptoManager.hashPassword(password, salt)
         context.dataStore.edit { prefs ->
