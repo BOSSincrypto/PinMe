@@ -40,7 +40,7 @@ import java.io.FileOutputStream
         Conversation::class,
         SearchHistory::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -82,7 +82,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val factoryKey = keyRecord.key.copyOf()
                 return Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME)
                     .openHelperFactory(SupportOpenHelperFactory(factoryKey))
-                    .addMigrations(MIGRATION_1_4, MIGRATION_2_4, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_5, MIGRATION_2_5, MIGRATION_3_5, MIGRATION_4_5)
                     .build()
             } finally {
                 keyRecord.key.fill(0)
@@ -238,25 +238,34 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        private val MIGRATION_1_4 = object : Migration(1, 4) {
+        private val MIGRATION_1_5 = object : Migration(1, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 migrateLegacySchema(database)
+                createPerformanceIndexes(database)
             }
         }
 
-        private val MIGRATION_2_4 = object : Migration(2, 4) {
+        private val MIGRATION_2_5 = object : Migration(2, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 migrateLegacySchema(database)
+                createPerformanceIndexes(database)
             }
         }
 
-        private val MIGRATION_3_4 = object : Migration(3, 4) {
+        private val MIGRATION_3_5 = object : Migration(3, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 if (database.hasTable("contacts")) {
                     database.addColumnIfMissing("contacts", "passwordIterations INTEGER NOT NULL DEFAULT 100000")
                 } else {
                     migrateLegacySchema(database)
                 }
+                createPerformanceIndexes(database)
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                createPerformanceIndexes(database)
             }
         }
 
@@ -326,6 +335,22 @@ abstract class AppDatabase : RoomDatabase() {
             database.addColumnIfMissing("search_history", "timestamp INTEGER NOT NULL DEFAULT 0")
             database.execSQL("UPDATE `reminders` SET `createdAt` = CASE WHEN `createdAt` <= 0 THEN strftime('%s','now') * 1000 ELSE `createdAt` END")
             database.execSQL("UPDATE `conversations` SET `createdAt` = CASE WHEN `createdAt` <= 0 THEN strftime('%s','now') * 1000 ELSE `createdAt` END")
+        }
+
+        private fun createPerformanceIndexes(database: SupportSQLiteDatabase) {
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_contacts_name` ON `contacts` (`name`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_contacts_isActive_name` ON `contacts` (`isActive`, `name`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_contacts_birthday` ON `contacts` (`birthday`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_tags_name` ON `tags` (`name`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_contact_tags_tagId` ON `contact_tags` (`tagId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_categories_name` ON `categories` (`name`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_events_contactId_date` ON `events` (`contactId`, `date`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_reminders_contactId_date` ON `reminders` (`contactId`, `date`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_social_networks_contactId` ON `social_networks` (`contactId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_custom_fields_contactId` ON `custom_fields` (`contactId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_conversations_contactId_date` ON `conversations` (`contactId`, `date`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_conversations_date` ON `conversations` (`date`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_search_history_timestamp` ON `search_history` (`timestamp`)")
         }
 
         private fun SupportSQLiteDatabase.hasTable(table: String): Boolean {

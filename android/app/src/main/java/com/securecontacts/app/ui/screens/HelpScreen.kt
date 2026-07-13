@@ -1,5 +1,7 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.localized
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -117,13 +119,13 @@ fun HelpScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Вкладка защищена паролем",
+                    text = localized("Вкладка защищена паролем"),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Введите пароль для доступа",
+                    text = localized("Введите пароль для доступа"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -131,7 +133,7 @@ fun HelpScreen(
                 Button(onClick = { showPasswordDialog = true }) {
                     Icon(Icons.Default.LockOpen, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Разблокировать")
+                    Text(localized("Разблокировать"))
                 }
             }
         }
@@ -141,7 +143,7 @@ fun HelpScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Помощь") },
+                title = { Text(localized("Помощь")) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -160,12 +162,12 @@ fun HelpScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Поиск по полю 'Чем может помочь'...") },
+                placeholder = { Text(localized("Поиск по полю 'Чем может помочь'...")) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Очистить")
+                            Icon(Icons.Default.Clear, contentDescription = localized("Очистить"))
                         }
                     }
                 },
@@ -189,9 +191,9 @@ fun HelpScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = if (searchQuery.isEmpty())
-                                "Нет контактов с информацией о помощи"
+                                localized("Нет контактов с информацией о помощи")
                             else
-                                "Контакты не найдены",
+                                localized("Контакты не найдены"),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -221,7 +223,7 @@ fun HelpScreen(
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     val clip = ClipData.newPlainText("phone", contact.phone)
                                     clipboard.setPrimaryClip(clip)
-                                    Toast.makeText(context, "Номер скопирован", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, localized("Номер скопирован"), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         )
@@ -270,7 +272,7 @@ fun HelpContactCard(
                     if (contact.avatarUri != null) {
                         AsyncImage(
                             model = contact.avatarUri,
-                            contentDescription = "Аватар",
+                            contentDescription = localized("Аватар"),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -312,15 +314,16 @@ fun HelpContactCard(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             items(tags.take(3)) { tag ->
+                                val tagColor = remember(tag.color) { parseTagColor(tag.color) }
                                 Surface(
                                     shape = RoundedCornerShape(4.dp),
-                                    color = Color(android.graphics.Color.parseColor(tag.color)).copy(alpha = 0.3f)
+                                    color = tagColor.copy(alpha = 0.3f)
                                 ) {
                                     Text(
                                         text = tag.name,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color(android.graphics.Color.parseColor(tag.color))
+                                        color = tagColor
                                     )
                                 }
                             }
@@ -333,7 +336,7 @@ fun HelpContactCard(
                     IconButton(onClick = onCopyClick) {
                         Icon(
                             Icons.Default.ContentCopy,
-                            contentDescription = "Копировать номер",
+                            contentDescription = localized("Копировать номер"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -344,7 +347,7 @@ fun HelpContactCard(
                     IconButton(onClick = onCallClick) {
                         Icon(
                             Icons.Default.Phone,
-                            contentDescription = "Позвонить",
+                            contentDescription = localized("Позвонить"),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -372,7 +375,7 @@ fun HelpContactCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = "Чем может помочь:",
+                            text = localized("Чем может помочь:"),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -401,11 +404,11 @@ fun SetHelpPasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Установить пароль") },
+        title = { Text(localized("Установить пароль")) },
         text = {
             Column {
                 Text(
-                    text = "Установите пароль длиной не менее 8 символов для защиты вкладки 'Помощь'",
+                    text = localized("Установите пароль длиной не менее 8 символов для защиты вкладки 'Помощь'"),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -415,7 +418,7 @@ fun SetHelpPasswordDialog(
                         password = it
                         showError = false
                     },
-                    label = { Text("Пароль") },
+                    label = { Text(localized("Пароль")) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -427,13 +430,13 @@ fun SetHelpPasswordDialog(
                         confirmPassword = it
                         showError = false
                     },
-                    label = { Text("Подтвердите пароль") },
+                    label = { Text(localized("Подтвердите пароль")) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     isError = showError,
                     supportingText = if (showError) {
-                        { Text("Пароли не совпадают") }
+                        { Text(localized("Пароли не совпадают")) }
                     } else null
                 )
             }
@@ -449,7 +452,7 @@ fun SetHelpPasswordDialog(
                 },
                 enabled = password.length >= 8 && confirmPassword.isNotEmpty()
             ) {
-                Text("Установить")
+                Text(localized("Установить"))
             }
         },
         dismissButton = null
@@ -467,25 +470,25 @@ fun EnterHelpPasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Введите пароль") },
+        title = { Text(localized("Введите пароль")) },
         text = {
             Column {
                 Text(
-                    text = "Введите пароль для доступа к вкладке 'Помощь'",
+                    text = localized("Введите пароль для доступа к вкладке 'Помощь'"),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Пароль") },
+                    label = { Text(localized("Пароль")) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     enabled = !isLoading,
                     modifier = Modifier.fillMaxWidth(),
                     isError = isError,
                     supportingText = if (isError) {
-                        { Text("Неверный пароль") }
+                        { Text(localized("Неверный пароль")) }
                     } else null
                 )
                 if (isLoading) {
@@ -499,7 +502,7 @@ fun EnterHelpPasswordDialog(
                 onClick = { onConfirm(password) },
                 enabled = password.isNotEmpty() && !isLoading
             ) {
-                Text("Войти")
+                Text(localized("Войти"))
             }
         },
         dismissButton = null

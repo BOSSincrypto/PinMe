@@ -1,5 +1,7 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.localized
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.securecontacts.app.data.model.Contact
 import com.securecontacts.app.data.model.Conversation
 import java.time.Instant
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,15 +30,16 @@ fun AllConversationsScreen(
     onContactClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val contactMap = contacts.associateBy { it.id }
+    val contactMap = contacts.associateBy(Contact::id)
+    val dateFormatter = rememberDateFormatter("dd MMM yyyy")
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Все разговоры") },
+                title = { Text(localized("Все разговоры")) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.Default.ArrowBack, contentDescription = localized("Назад"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -61,7 +64,7 @@ fun AllConversationsScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "Нет записей о разговорах",
+                        localized("Нет записей о разговорах"),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -76,9 +79,9 @@ fun AllConversationsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(conversations, key = { it.id }) { conversation ->
-                    val contactName = contactMap[conversation.contactId]?.name ?: "Неизвестный"
+                    val contactName = contactMap[conversation.contactId]?.name ?: localized("Неизвестный")
                     val convDate = Instant.ofEpochMilli(conversation.date)
-                        .atZone(ZoneId.systemDefault())
+                        .atZone(ZoneOffset.UTC)
                         .toLocalDate()
 
                     Card(
@@ -103,7 +106,7 @@ fun AllConversationsScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = convDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
+                                    text = convDate.format(dateFormatter),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.primary
                                 )

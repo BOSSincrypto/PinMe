@@ -1,5 +1,7 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.localized
+
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,7 +32,7 @@ import coil.compose.AsyncImage
 import com.securecontacts.app.data.model.*
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 data class SocialNetworkInput(
@@ -173,10 +175,10 @@ fun CreateEditContactScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditMode) "Редактировать контакт" else "Новый контакт") },
+                title = { Text(if (isEditMode) localized("Редактировать контакт") else localized("Новый контакт")) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.Close, contentDescription = "Отмена")
+                        Icon(Icons.Default.Close, contentDescription = localized("Отмена"))
                     }
                 },
                 actions = {
@@ -199,7 +201,7 @@ fun CreateEditContactScreen(
                         },
                         enabled = name.isNotBlank() && passwordValid
                     ) {
-                        Text("Сохранить", fontWeight = FontWeight.Bold)
+                        Text(localized("Сохранить"), fontWeight = FontWeight.Bold)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -236,14 +238,14 @@ fun CreateEditContactScreen(
                         if (avatarUri != null) {
                             AsyncImage(
                                 model = avatarUri,
-                                contentDescription = "Аватар",
+                                contentDescription = localized("Аватар"),
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
                         } else {
                             Icon(
                                 Icons.Default.CameraAlt,
-                                contentDescription = "Добавить фото",
+                                contentDescription = localized("Добавить фото"),
                                 modifier = Modifier.size(40.dp),
                                 tint = MaterialTheme.colorScheme.onPrimary
                             )
@@ -265,7 +267,7 @@ fun CreateEditContactScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Основная информация",
+                            text = localized("Основная информация"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -273,7 +275,7 @@ fun CreateEditContactScreen(
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
-                            label = { Text("Имя *") },
+                            label = { Text(localized("Имя *")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
@@ -282,7 +284,7 @@ fun CreateEditContactScreen(
                         OutlinedTextField(
                             value = phone,
                             onValueChange = { phone = it },
-                            label = { Text("Телефон") },
+                            label = { Text(localized("Телефон")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -292,7 +294,7 @@ fun CreateEditContactScreen(
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it },
-                            label = { Text("Электронная почта") },
+                            label = { Text(localized("Электронная почта")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -302,7 +304,7 @@ fun CreateEditContactScreen(
                         OutlinedTextField(
                             value = address,
                             onValueChange = { address = it },
-                            label = { Text("Адрес") },
+                            label = { Text(localized("Адрес")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = false,
                             maxLines = 3,
@@ -312,7 +314,7 @@ fun CreateEditContactScreen(
                         OutlinedTextField(
                             value = workplace,
                             onValueChange = { workplace = it },
-                            label = { Text("Место работы") },
+                            label = { Text(localized("Место работы")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) }
@@ -321,7 +323,7 @@ fun CreateEditContactScreen(
                         OutlinedTextField(
                             value = position,
                             onValueChange = { position = it },
-                            label = { Text("Должность") },
+                            label = { Text(localized("Должность")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             leadingIcon = { Icon(Icons.Default.Work, contentDescription = null) }
@@ -330,7 +332,7 @@ fun CreateEditContactScreen(
                         OutlinedTextField(
                             value = source,
                             onValueChange = { source = it },
-                            label = { Text("Источник (Как познакомились?)") },
+                            label = { Text(localized("Источник (Как познакомились?)")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             leadingIcon = { Icon(Icons.Default.PersonSearch, contentDescription = null) }
@@ -339,7 +341,7 @@ fun CreateEditContactScreen(
                         OutlinedTextField(
                             value = helpInfo,
                             onValueChange = { helpInfo = it },
-                            label = { Text("Чем может помочь") },
+                            label = { Text(localized("Чем может помочь")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = false,
                             maxLines = 3,
@@ -350,12 +352,12 @@ fun CreateEditContactScreen(
                         OutlinedTextField(
                             value = birthday?.let {
                                 Instant.ofEpochMilli(it)
-                                    .atZone(ZoneId.systemDefault())
+                                    .atZone(ZoneOffset.UTC)
                                     .toLocalDate()
                                     .format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
                             } ?: "",
                             onValueChange = {},
-                            label = { Text("День рождения") },
+                            label = { Text(localized("День рождения")) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { showDatePicker = true },
@@ -364,7 +366,7 @@ fun CreateEditContactScreen(
                             trailingIcon = {
                                 if (birthday != null) {
                                     IconButton(onClick = { birthday = null }) {
-                                        Icon(Icons.Default.Clear, contentDescription = "Очистить")
+                                        Icon(Icons.Default.Clear, contentDescription = localized("Очистить"))
                                     }
                                 }
                             }
@@ -386,14 +388,14 @@ fun CreateEditContactScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = if (isEditMode) "Изменить пароль" else "Безопасность",
+                            text = if (isEditMode) localized("Изменить пароль") else localized("Безопасность"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
 
                         if (isEditMode) {
                             Text(
-                                text = "Оставьте пустым, чтобы сохранить текущий пароль",
+                                text = localized("Оставьте пустым, чтобы сохранить текущий пароль"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -402,7 +404,7 @@ fun CreateEditContactScreen(
                         OutlinedTextField(
                             value = password,
                             onValueChange = { password = it },
-                            label = { Text(if (isEditMode) "Новый пароль" else "Пароль *") },
+                            label = { Text(if (isEditMode) localized("Новый пароль") else localized("Пароль *")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -411,7 +413,7 @@ fun CreateEditContactScreen(
                                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                     Icon(
                                         if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                        contentDescription = "Показать или скрыть пароль"
+                                        contentDescription = localized("Показать или скрыть пароль")
                                     )
                                 }
                             }
@@ -420,14 +422,14 @@ fun CreateEditContactScreen(
                         OutlinedTextField(
                             value = confirmPassword,
                             onValueChange = { confirmPassword = it },
-                            label = { Text(if (isEditMode) "Подтвердите новый пароль" else "Подтвердите пароль *") },
+                            label = { Text(if (isEditMode) localized("Подтвердите новый пароль") else localized("Подтвердите пароль *")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                             isError = confirmPassword.isNotEmpty() && password != confirmPassword,
                             supportingText = if (confirmPassword.isNotEmpty() && password != confirmPassword) {
-                                { Text("Пароли не совпадают") }
+                                { Text(localized("Пароли не совпадают")) }
                             } else null
                         )
                     }
@@ -452,14 +454,14 @@ fun CreateEditContactScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Категория",
+                                text = localized("Категория"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             TextButton(onClick = onCreateCategoryClick) {
                                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Новая")
+                                Text(localized("Новая"))
                             }
                         }
 
@@ -470,16 +472,17 @@ fun CreateEditContactScreen(
                                 FilterChip(
                                     selected = selectedCategoryId == null,
                                     onClick = { selectedCategoryId = null },
-                                    label = { Text("Нет") }
+                                    label = { Text(localized("Нет")) }
                                 )
                             }
                             items(allCategories) { category ->
+                                val categoryColor = remember(category.color) { parseTagColor(category.color) }
                                 FilterChip(
                                     selected = selectedCategoryId == category.id,
                                     onClick = { selectedCategoryId = category.id },
                                     label = { Text(category.name) },
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = Color(android.graphics.Color.parseColor(category.color)).copy(alpha = 0.3f)
+                                        selectedContainerColor = categoryColor.copy(alpha = 0.3f)
                                     )
                                 )
                             }
@@ -506,14 +509,14 @@ fun CreateEditContactScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Теги",
+                                text = localized("Теги"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             TextButton(onClick = onCreateTagClick) {
                                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Новый")
+                                Text(localized("Новый"))
                             }
                         }
 
@@ -521,6 +524,7 @@ fun CreateEditContactScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(allTags) { tag ->
+                                val tagColor = remember(tag.color) { parseTagColor(tag.color) }
                                 FilterChip(
                                     selected = selectedTagIds.contains(tag.id),
                                     onClick = {
@@ -532,7 +536,7 @@ fun CreateEditContactScreen(
                                     },
                                     label = { Text(tag.name) },
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = Color(android.graphics.Color.parseColor(tag.color)).copy(alpha = 0.3f)
+                                        selectedContainerColor = tagColor.copy(alpha = 0.3f)
                                     )
                                 )
                             }
@@ -559,12 +563,12 @@ fun CreateEditContactScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Социальные сети",
+                                text = localized("Социальные сети"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             IconButton(onClick = { showAddSocialDialog = true }) {
-                                Icon(Icons.Default.Add, contentDescription = "Добавить соцсеть")
+                                Icon(Icons.Default.Add, contentDescription = localized("Добавить соцсеть"))
                             }
                         }
 
@@ -588,7 +592,7 @@ fun CreateEditContactScreen(
                                 IconButton(onClick = {
                                     socialNetworks = socialNetworks.toMutableList().also { it.removeAt(index) }
                                 }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                                    Icon(Icons.Default.Delete, contentDescription = localized("Удалить"))
                                 }
                             }
                         }
@@ -614,12 +618,12 @@ fun CreateEditContactScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "События",
+                                text = localized("События"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             IconButton(onClick = { showAddEventDialog = true }) {
-                                Icon(Icons.Default.Add, contentDescription = "Добавить событие")
+                                Icon(Icons.Default.Add, contentDescription = localized("Добавить событие"))
                             }
                         }
 
@@ -635,7 +639,7 @@ fun CreateEditContactScreen(
                                         fontWeight = FontWeight.Medium
                                     )
                                     val eventDate = Instant.ofEpochMilli(event.date)
-                                        .atZone(ZoneId.systemDefault())
+                                        .atZone(ZoneOffset.UTC)
                                         .toLocalDate()
                                     Text(
                                         text = eventDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
@@ -646,7 +650,7 @@ fun CreateEditContactScreen(
                                 IconButton(onClick = {
                                     events = events.toMutableList().also { it.removeAt(index) }
                                 }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                                    Icon(Icons.Default.Delete, contentDescription = localized("Удалить"))
                                 }
                             }
                         }
@@ -672,12 +676,12 @@ fun CreateEditContactScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Напоминания",
+                                text = localized("Напоминания"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             IconButton(onClick = { showAddReminderDialog = true }) {
-                                Icon(Icons.Default.Add, contentDescription = "Добавить напоминание")
+                                Icon(Icons.Default.Add, contentDescription = localized("Добавить напоминание"))
                             }
                         }
 
@@ -694,7 +698,7 @@ fun CreateEditContactScreen(
                                     )
                                     if (reminder.date != null) {
                                         val reminderDate = Instant.ofEpochMilli(reminder.date)
-                                            .atZone(ZoneId.systemDefault())
+                                            .atZone(ZoneOffset.UTC)
                                             .toLocalDate()
                                         Text(
                                             text = reminderDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
@@ -706,7 +710,7 @@ fun CreateEditContactScreen(
                                 IconButton(onClick = {
                                     reminders = reminders.toMutableList().also { it.removeAt(index) }
                                 }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                                    Icon(Icons.Default.Delete, contentDescription = localized("Удалить"))
                                 }
                             }
                         }
@@ -732,12 +736,12 @@ fun CreateEditContactScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Пользовательские поля",
+                                text = localized("Пользовательские поля"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             IconButton(onClick = { showAddFieldDialog = true }) {
-                                Icon(Icons.Default.Add, contentDescription = "Добавить поле")
+                                Icon(Icons.Default.Add, contentDescription = localized("Добавить поле"))
                             }
                         }
 
@@ -761,7 +765,7 @@ fun CreateEditContactScreen(
                                 IconButton(onClick = {
                                     customFields = customFields.toMutableList().also { it.removeAt(index) }
                                 }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                                    Icon(Icons.Default.Delete, contentDescription = localized("Удалить"))
                                 }
                             }
                         }
@@ -785,12 +789,12 @@ fun CreateEditContactScreen(
                     birthday = datePickerState.selectedDateMillis
                     showDatePicker = false
                 }) {
-                    Text("ОК")
+                    Text(localized("ОК"))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Отмена")
+                    Text(localized("Отмена"))
                 }
             }
         ) {
@@ -854,25 +858,25 @@ fun AddSocialNetworkDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Добавить соцсеть") },
+        title = { Text(localized("Добавить соцсеть")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = type,
                     onValueChange = { type = it },
-                    label = { Text("Тип (напр., Telegram, WhatsApp)") },
+                    label = { Text(localized("Тип (напр., Telegram, WhatsApp)")) },
                     singleLine = true
                 )
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text("Имя пользователя") },
+                    label = { Text(localized("Имя пользователя")) },
                     singleLine = true
                 )
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("Ссылка (необязательно)") },
+                    label = { Text(localized("Ссылка (необязательно)")) },
                     singleLine = true
                 )
             }
@@ -882,12 +886,12 @@ fun AddSocialNetworkDialog(
                 onClick = { onAdd(type, url, username) },
                 enabled = type.isNotBlank()
             ) {
-                Text("Добавить")
+                Text(localized("Добавить"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(localized("Отмена"))
             }
         }
     )
@@ -907,31 +911,31 @@ fun AddEventDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Добавить событие") },
+        title = { Text(localized("Добавить событие")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Название") },
+                    label = { Text(localized("Название")) },
                     singleLine = true
                 )
                 OutlinedTextField(
                     value = datePickerState.selectedDateMillis?.let {
                         Instant.ofEpochMilli(it)
-                            .atZone(ZoneId.systemDefault())
+                            .atZone(ZoneOffset.UTC)
                             .toLocalDate()
                             .format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
-                    } ?: "Выберите дату",
+                    } ?: localized("Выберите дату"),
                     onValueChange = {},
-                    label = { Text("Дата") },
+                    label = { Text(localized("Дата")) },
                     enabled = false,
                     modifier = Modifier.clickable { showDatePicker = true }
                 )
                 OutlinedTextField(
                     value = comment,
                     onValueChange = { comment = it },
-                    label = { Text("Комментарий") },
+                    label = { Text(localized("Комментарий")) },
                     singleLine = true
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -939,7 +943,7 @@ fun AddEventDialog(
                         checked = isRecurring,
                         onCheckedChange = { isRecurring = it }
                     )
-                    Text("Повторяется ежегодно")
+                    Text(localized("Повторяется ежегодно"))
                 }
             }
         },
@@ -952,12 +956,12 @@ fun AddEventDialog(
                 },
                 enabled = title.isNotBlank() && datePickerState.selectedDateMillis != null
             ) {
-                Text("Добавить")
+                Text(localized("Добавить"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(localized("Отмена"))
             }
         }
     )
@@ -967,7 +971,7 @@ fun AddEventDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("ОК")
+                    Text(localized("ОК"))
                 }
             }
         ) {
@@ -990,13 +994,13 @@ fun AddReminderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Добавить напоминание") },
+        title = { Text(localized("Добавить напоминание")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Название") },
+                    label = { Text(localized("Название")) },
                     singleLine = true
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1004,18 +1008,18 @@ fun AddReminderDialog(
                         checked = hasDate,
                         onCheckedChange = { hasDate = it }
                     )
-                    Text("Установить дату")
+                    Text(localized("Установить дату"))
                 }
                 if (hasDate) {
                     OutlinedTextField(
                         value = datePickerState.selectedDateMillis?.let {
                             Instant.ofEpochMilli(it)
-                                .atZone(ZoneId.systemDefault())
+                                .atZone(ZoneOffset.UTC)
                                 .toLocalDate()
                                 .format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
-                        } ?: "Выберите дату",
+                        } ?: localized("Выберите дату"),
                         onValueChange = {},
-                        label = { Text("Дата") },
+                        label = { Text(localized("Дата")) },
                         enabled = false,
                         modifier = Modifier.clickable { showDatePicker = true }
                     )
@@ -1023,7 +1027,7 @@ fun AddReminderDialog(
                 OutlinedTextField(
                     value = comment,
                     onValueChange = { comment = it },
-                    label = { Text("Комментарий") },
+                    label = { Text(localized("Комментарий")) },
                     singleLine = true
                 )
             }
@@ -1035,12 +1039,12 @@ fun AddReminderDialog(
                 },
                 enabled = title.isNotBlank() && (!hasDate || datePickerState.selectedDateMillis != null)
             ) {
-                Text("Добавить")
+                Text(localized("Добавить"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(localized("Отмена"))
             }
         }
     )
@@ -1050,7 +1054,7 @@ fun AddReminderDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("ОК")
+                    Text(localized("ОК"))
                 }
             }
         ) {
@@ -1069,19 +1073,19 @@ fun AddCustomFieldDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Добавить поле") },
+        title = { Text(localized("Добавить поле")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = fieldName,
                     onValueChange = { fieldName = it },
-                    label = { Text("Название поля") },
+                    label = { Text(localized("Название поля")) },
                     singleLine = true
                 )
                 OutlinedTextField(
                     value = fieldValue,
                     onValueChange = { fieldValue = it },
-                    label = { Text("Значение поля") },
+                    label = { Text(localized("Значение поля")) },
                     singleLine = true
                 )
             }
@@ -1091,12 +1095,12 @@ fun AddCustomFieldDialog(
                 onClick = { onAdd(fieldName, fieldValue) },
                 enabled = fieldName.isNotBlank() && fieldValue.isNotBlank()
             ) {
-                Text("Добавить")
+                Text(localized("Добавить"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(localized("Отмена"))
             }
         }
     )

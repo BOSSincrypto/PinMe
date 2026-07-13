@@ -1,5 +1,7 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.localized
+
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -53,7 +55,7 @@ fun SearchScreen(
                         value = searchQuery,
                         onValueChange = onSearchQueryChange,
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Поиск контактов...") },
+                        placeholder = { Text(localized("Поиск контактов...")) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color.Transparent,
@@ -62,7 +64,7 @@ fun SearchScreen(
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { onSearchQueryChange("") }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Очистить")
+                                    Icon(Icons.Default.Clear, contentDescription = localized("Очистить"))
                                 }
                             }
                         }
@@ -70,7 +72,7 @@ fun SearchScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.Default.ArrowBack, contentDescription = localized("Назад"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -102,13 +104,13 @@ fun SearchScreen(
                                 .padding(16.dp)
                         ) {
                             Text(
-                                text = "Советы по поиску",
+                                text = localized("Советы по поиску"),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Поиск по имени, номеру телефона (последние 4 цифры), месту работы, должности или источнику",
+                                text = localized("Поиск по имени, номеру телефона (последние 4 цифры), месту работы, должности или источнику"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -125,12 +127,12 @@ fun SearchScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Недавние поиски",
+                                text = localized("Недавние поиски"),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
                             TextButton(onClick = onClearHistory) {
-                                Text("Очистить")
+                                Text(localized("Очистить"))
                             }
                         }
                     }
@@ -175,12 +177,12 @@ fun SearchScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "Результаты не найдены",
+                                    text = localized("Результаты не найдены"),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "Попробуйте другой поисковый запрос",
+                                    text = localized("Попробуйте другой поисковый запрос"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -190,7 +192,11 @@ fun SearchScreen(
                 } else {
                     item {
                         Text(
-                            text = "${searchResults.size} результат${if (searchResults.size != 1) "ов" else ""}",
+                            text = if (searchResults.size == 1) {
+                                localized("%d результат", searchResults.size)
+                            } else {
+                                localized("%d результатов", searchResults.size)
+                            },
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -255,7 +261,7 @@ fun SearchResultCard(
                 if (contact.avatarUri != null) {
                     AsyncImage(
                         model = contact.avatarUri,
-                        contentDescription = "Аватар",
+                        contentDescription = localized("Аватар"),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -282,11 +288,11 @@ fun SearchResultCard(
 
                 // Show matching field
                 val matchingField = when {
-                    contact.phone.contains(searchQuery, ignoreCase = true) -> "Телефон: ${contact.phone}"
-                    contact.workplace.contains(searchQuery, ignoreCase = true) -> "Работа: ${contact.workplace}"
-                    contact.position.contains(searchQuery, ignoreCase = true) -> "Должность: ${contact.position}"
+                    contact.phone.contains(searchQuery, ignoreCase = true) -> localized("Телефон: %s", contact.phone)
+                    contact.workplace.contains(searchQuery, ignoreCase = true) -> localized("Работа: %s", contact.workplace)
+                    contact.position.contains(searchQuery, ignoreCase = true) -> localized("Должность: %s", contact.position)
                     canShowProtectedData && contact.source.contains(searchQuery, ignoreCase = true) ->
-                        "Источник: ${contact.source}"
+                        localized("Источник: %s", contact.source)
                     else -> null
                 }
 
@@ -315,15 +321,16 @@ fun SearchResultCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(tags.take(2)) { tag ->
+                            val tagColor = remember(tag.color) { parseTagColor(tag.color) }
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
-                                color = Color(android.graphics.Color.parseColor(tag.color)).copy(alpha = 0.3f)
+                                color = tagColor.copy(alpha = 0.3f)
                             ) {
                                 Text(
                                     text = tag.name,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color(android.graphics.Color.parseColor(tag.color))
+                                    color = tagColor
                                 )
                             }
                         }
@@ -336,7 +343,7 @@ fun SearchResultCard(
                 IconButton(onClick = onCallClick) {
                     Icon(
                         Icons.Default.Phone,
-                        contentDescription = "Позвонить",
+                        contentDescription = localized("Позвонить"),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }

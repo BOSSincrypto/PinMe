@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PinMe</string>
+    <string name="contacts">Contacts</string>
+    <string name="dates">Dates</string>
+    <string name="reminders">Reminders</string>
+    <string name="settings">Settings</string>
+    <string name="search">Search</string>
+    <string name="tags">Tags</string>
+    <string name="categories">Categories</string>
+    <string name="help">Help</string>
+    <string name="contact">Contact</string>
+    <string name="new_contact">New contact</string>
+    <string name="edit">Edit</string>
+    <string name="password_setup">Set up password</string>
+    <string name="conversations">Conversations</string>
+</resources>

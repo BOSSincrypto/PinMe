@@ -1,5 +1,7 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.localized
+
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -25,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.securecontacts.app.data.model.*
 import java.time.Instant
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,20 +65,20 @@ fun ContactDetailScreen(
                 title = { Text(contact.name) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.Default.ArrowBack, contentDescription = localized("Назад"))
                     }
                 },
                 actions = {
                     if (isUnlocked) {
                         IconButton(onClick = onEditClick) {
-                            Icon(Icons.Default.Edit, contentDescription = "Редактировать")
+                            Icon(Icons.Default.Edit, contentDescription = localized("Редактировать"))
                         }
                         IconButton(onClick = onDeleteClick) {
-                            Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                            Icon(Icons.Default.Delete, contentDescription = localized("Удалить"))
                         }
                     } else {
                         IconButton(onClick = onUnlockClick) {
-                            Icon(Icons.Default.LockOpen, contentDescription = "Разблокировать")
+                            Icon(Icons.Default.LockOpen, contentDescription = localized("Разблокировать"))
                         }
                     }
                 },
@@ -115,7 +117,7 @@ fun ContactDetailScreen(
                             if (contact.avatarUri != null) {
                                 AsyncImage(
                                     model = contact.avatarUri,
-                                    contentDescription = "Аватар",
+                                    contentDescription = localized("Аватар"),
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
                                 )
@@ -159,15 +161,16 @@ fun ContactDetailScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 items(contactWithDetails.tags) { tag ->
+                                    val tagColor = remember(tag.color) { parseTagColor(tag.color) }
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
-                                        color = Color(android.graphics.Color.parseColor(tag.color)).copy(alpha = 0.3f)
+                                        color = tagColor.copy(alpha = 0.3f)
                                     ) {
                                         Text(
                                             text = tag.name,
                                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                             style = MaterialTheme.typography.labelMedium,
-                                            color = Color(android.graphics.Color.parseColor(tag.color))
+                                            color = tagColor
                                         )
                                     }
                                 }
@@ -199,11 +202,11 @@ fun ContactDetailScreen(
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column {
                                     Text(
-                                        text = "Статус контакта",
+                                        text = localized("Статус контакта"),
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                     Text(
-                                        text = if (contact.isActive) "Активный (общаюсь)" else "Неактивный (не общаюсь)",
+                                        text = if (contact.isActive) localized("Активный (общаюсь)") else localized("Неактивный (не общаюсь)"),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = if (contact.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -246,17 +249,17 @@ fun ContactDetailScreen(
                                     type = "text/plain"
                                     putExtra(Intent.EXTRA_TEXT, shareText)
                                 }
-                                context.startActivity(Intent.createChooser(intent, "Поделиться контактом"))
+                                context.startActivity(Intent.createChooser(intent, localized("Поделиться контактом")))
                             }
                         ) {
                             Icon(
                                 Icons.Default.Share,
-                                contentDescription = "Поделиться",
+                                contentDescription = localized("Поделиться"),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(28.dp)
                             )
                             Text(
-                                text = "Поделиться",
+                                text = localized("Поделиться"),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -330,17 +333,17 @@ fun ContactDetailScreen(
                                     val intent = Intent(Intent.ACTION_SENDTO).apply {
                                         data = Uri.parse("mailto:${contact.email}")
                                     }
-                                    context.startActivity(Intent.createChooser(intent, "Отправить email"))
+                                    context.startActivity(Intent.createChooser(intent, localized("Отправить email")))
                                 }
                             ) {
                                 Icon(
                                     Icons.Default.Email,
-                                    contentDescription = "Электронная почта",
+                                    contentDescription = localized("Электронная почта"),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(28.dp)
                                 )
                                 Text(
-                                    text = "Эл. почта",
+                                    text = localized("Эл. почта"),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -378,7 +381,7 @@ fun ContactDetailScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = "Телефон",
+                                    text = localized("Телефон"),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -402,7 +405,7 @@ fun ContactDetailScreen(
                                 val intent = Intent(Intent.ACTION_SENDTO).apply {
                                     data = Uri.parse("mailto:${contact.email}")
                                 }
-                                context.startActivity(Intent.createChooser(intent, "Отправить email"))
+                                context.startActivity(Intent.createChooser(intent, localized("Отправить email")))
                             },
                         shape = RoundedCornerShape(16.dp)
                     ) {
@@ -420,7 +423,7 @@ fun ContactDetailScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = "Электронная почта",
+                                    text = localized("Электронная почта"),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -455,7 +458,7 @@ fun ContactDetailScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = "Адрес",
+                                    text = localized("Адрес"),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -490,7 +493,7 @@ fun ContactDetailScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = "Чем может помочь",
+                                    text = localized("Чем может помочь"),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -525,12 +528,12 @@ fun ContactDetailScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = "День рождения",
+                                    text = localized("День рождения"),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 val birthdayDate = Instant.ofEpochMilli(contact.birthday)
-                                    .atZone(ZoneId.systemDefault())
+                                    .atZone(ZoneOffset.UTC)
                                     .toLocalDate()
                                 Text(
                                     text = birthdayDate.format(DateTimeFormatter.ofPattern("dd MMMM yyyy")),
@@ -563,7 +566,7 @@ fun ContactDetailScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = "Источник",
+                                    text = localized("Источник"),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -598,7 +601,7 @@ fun ContactDetailScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = "Категория",
+                                    text = localized("Категория"),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -632,7 +635,7 @@ fun ContactDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
-                                    text = "Социальные сети",
+                                    text = localized("Социальные сети"),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -701,7 +704,7 @@ fun ContactDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
-                                    text = "События",
+                                    text = localized("События"),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -709,7 +712,7 @@ fun ContactDetailScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             contactWithDetails.events.forEach { event ->
                                 val eventDate = Instant.ofEpochMilli(event.date)
-                                    .atZone(ZoneId.systemDefault())
+                                    .atZone(ZoneOffset.UTC)
                                     .toLocalDate()
                                 Row(
                                     modifier = Modifier
@@ -739,7 +742,7 @@ fun ContactDetailScreen(
                                     if (event.isRecurring) {
                                         Icon(
                                             Icons.Default.Repeat,
-                                            contentDescription = "Повторяется",
+                                            contentDescription = localized("Повторяется"),
                                             modifier = Modifier.size(16.dp),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -771,7 +774,7 @@ fun ContactDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
-                                    text = "Напоминания",
+                                    text = localized("Напоминания"),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -792,7 +795,7 @@ fun ContactDetailScreen(
                                         )
                                         if (reminder.date != null) {
                                             val reminderDate = Instant.ofEpochMilli(reminder.date)
-                                                .atZone(ZoneId.systemDefault())
+                                                .atZone(ZoneOffset.UTC)
                                                 .toLocalDate()
                                             Text(
                                                 text = reminderDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
@@ -811,7 +814,7 @@ fun ContactDetailScreen(
                                     if (reminder.isCompleted) {
                                         Icon(
                                             Icons.Default.CheckCircle,
-                                            contentDescription = "Завершено",
+                                            contentDescription = localized("Завершено"),
                                             modifier = Modifier.size(20.dp),
                                             tint = MaterialTheme.colorScheme.primary
                                         )
@@ -843,7 +846,7 @@ fun ContactDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
-                                    text = "Дополнительная информация",
+                                    text = localized("Дополнительная информация"),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -897,20 +900,20 @@ fun ContactDetailScreen(
                                     )
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Text(
-                                        text = "О чём разговаривали",
+                                        text = localized("О чём разговаривали"),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
                                 IconButton(onClick = { showAddConversationDialog = true }) {
-                                    Icon(Icons.Default.Add, contentDescription = "Добавить запись")
+                                    Icon(Icons.Default.Add, contentDescription = localized("Добавить запись"))
                                 }
                             }
 
                             if (contactWithDetails.conversations.isEmpty()) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Нет записей о разговорах",
+                                    text = localized("Нет записей о разговорах"),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -918,7 +921,7 @@ fun ContactDetailScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
                                 contactWithDetails.conversations.forEach { conversation ->
                                     val convDate = Instant.ofEpochMilli(conversation.date)
-                                        .atZone(ZoneId.systemDefault())
+                                        .atZone(ZoneOffset.UTC)
                                         .toLocalDate()
                                     Row(
                                         modifier = Modifier
@@ -940,7 +943,7 @@ fun ContactDetailScreen(
                                         IconButton(onClick = { onDeleteConversation(conversation) }) {
                                             Icon(
                                                 Icons.Default.Delete,
-                                                contentDescription = "Удалить",
+                                                contentDescription = localized("Удалить"),
                                                 modifier = Modifier.size(18.dp),
                                                 tint = MaterialTheme.colorScheme.error
                                             )
@@ -978,12 +981,12 @@ fun ContactDetailScreen(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "Защищённое содержимое",
+                                text = localized("Защищённое содержимое"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Введите пароль или используйте биометрию для просмотра",
+                                text = localized("Введите пароль или используйте биометрию для просмотра"),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -991,7 +994,7 @@ fun ContactDetailScreen(
                             Button(onClick = onUnlockClick) {
                                 Icon(Icons.Default.LockOpen, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Разблокировать")
+                                Text(localized("Разблокировать"))
                             }
                         }
                     }
@@ -1026,16 +1029,16 @@ fun AddConversationDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Новая запись о разговоре") },
+        title = { Text(localized("Новая запись о разговоре")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = Instant.ofEpochMilli(selectedDate)
-                        .atZone(ZoneId.systemDefault())
+                        .atZone(ZoneOffset.UTC)
                         .toLocalDate()
                         .format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
                     onValueChange = {},
-                    label = { Text("Дата") },
+                    label = { Text(localized("Дата")) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { showDatePicker = true },
@@ -1046,7 +1049,7 @@ fun AddConversationDialog(
                 OutlinedTextField(
                     value = topic,
                     onValueChange = { topic = it },
-                    label = { Text("О чём разговаривали") },
+                    label = { Text(localized("О чём разговаривали")) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = false,
                     maxLines = 5,
@@ -1059,12 +1062,12 @@ fun AddConversationDialog(
                 onClick = { onConfirm(selectedDate, topic) },
                 enabled = topic.isNotBlank()
             ) {
-                Text("Сохранить")
+                Text(localized("Сохранить"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(localized("Отмена"))
             }
         }
     )
@@ -1079,12 +1082,12 @@ fun AddConversationDialog(
                     }
                     showDatePicker = false
                 }) {
-                    Text("ОК")
+                    Text(localized("ОК"))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Отмена")
+                    Text(localized("Отмена"))
                 }
             }
         ) {

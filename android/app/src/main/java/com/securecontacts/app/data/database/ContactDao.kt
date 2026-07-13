@@ -32,7 +32,7 @@ interface ContactDao {
             CASE WHEN name LIKE :query || '%' THEN 0 ELSE 1 END,
             name ASC
     """)
-    fun searchContacts(query: String): Flow<List<Contact>>
+    suspend fun searchContactsSync(query: String): List<Contact>
 
     @Query("""
         SELECT * FROM contacts
@@ -87,6 +87,14 @@ interface TagDao {
         WHERE ct.contactId = :contactId
     """)
     suspend fun getTagsForContactSync(contactId: Long): List<Tag>
+
+    @Query("""
+        SELECT ct.contactId AS contactId, t.id AS tagId, t.name AS tagName, t.color AS tagColor
+        FROM contact_tags ct
+        INNER JOIN tags t ON t.id = ct.tagId
+        ORDER BY ct.contactId ASC, t.name ASC
+    """)
+    fun getAllContactTags(): Flow<List<ContactTagWithTag>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTag(tag: Tag): Long

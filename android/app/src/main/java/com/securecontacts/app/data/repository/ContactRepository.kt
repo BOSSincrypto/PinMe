@@ -6,8 +6,10 @@ import com.securecontacts.app.data.model.*
 import com.securecontacts.app.security.CryptoManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.Instant
+import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 
 class ContactRepository(
@@ -31,7 +33,7 @@ class ContactRepository(
 
     fun getActiveContacts(): Flow<List<Contact>> = contactDao.getActiveContacts()
 
-    fun searchContacts(query: String): Flow<List<Contact>> = contactDao.searchContacts(query)
+    suspend fun searchContactsSnapshot(query: String): List<Contact> = contactDao.searchContactsSync(query)
 
     fun searchByPhoneLastDigits(lastDigits: String): Flow<List<Contact>> =
         contactDao.searchByPhoneLastDigits(lastDigits)
@@ -176,6 +178,15 @@ class ContactRepository(
     suspend fun getAllTagsSnapshot(): List<Tag> = tagDao.getAllTagsSync()
 
     fun getTagsForContact(contactId: Long): Flow<List<Tag>> = tagDao.getTagsForContact(contactId)
+
+    fun getAllContactTags(): Flow<Map<Long, List<Tag>>> = tagDao.getAllContactTags().map { links ->
+        links.groupBy(
+            keySelector = ContactTagWithTag::contactId,
+            valueTransform = { link ->
+                Tag(id = link.tagId, name = link.tagName, color = link.tagColor)
+            }
+        )
+    }
 
     suspend fun createTag(name: String, color: String): Long =
         tagDao.insertTag(Tag(name = name, color = color))
@@ -378,11 +389,14 @@ class ContactRepository(
             contactDao.getAllContacts()
         ) { contactsWithBirthdays, events, allContacts ->
             val dateItems = mutableListOf<DateItem>()
+            val contactsById = allContacts.associateBy(Contact::id)
 
             // Add birthdays
             contactsWithBirthdays.forEach { contact ->
                 contact.birthday?.let { birthdayMillis ->
-                    val birthdayDate = LocalDate.ofEpochDay(birthdayMillis / (24 * 60 * 60 * 1000))
+                    val birthdayDate = Instant.ofEpochMilli(birthdayMillis)
+                        .atZone(ZoneOffset.UTC)
+                        .toLocalDate()
                     val thisYearBirthday = birthdayDate.withYear(today.year)
                     val nextBirthday = if (thisYearBirthday.isBefore(today)) {
                         thisYearBirthday.plusYears(1)
@@ -395,8 +409,8 @@ class ContactRepository(
                     dateItems.add(DateItem(
                         contactId = contact.id,
                         contactName = contact.name,
-                        title = "День рождения",
-                        date = nextBirthday.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                        title = "",
+                        date = nextBirthday.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
                         comment = "",
                         isBirthday = true,
                         daysLeft = daysLeft,
@@ -407,8 +421,10 @@ class ContactRepository(
 
             // Add events
             events.forEach { event ->
-                val contact = allContacts.find { it.id == event.contactId }
-                val eventDate = LocalDate.ofEpochDay(event.date / (24 * 60 * 60 * 1000))
+                val contact = contactsById[event.contactId]
+                val eventDate = Instant.ofEpochMilli(event.date)
+                    .atZone(ZoneOffset.UTC)
+                    .toLocalDate()
                 val daysLeft = ChronoUnit.DAYS.between(today, eventDate).toInt()
 
                 if (event.isRecurring) {
@@ -422,9 +438,9 @@ class ContactRepository(
 
                     dateItems.add(DateItem(
                         contactId = event.contactId,
-                        contactName = contact?.name ?: "Неизвестный контакт",
+                        contactName = contact?.name.orEmpty(),
                         title = event.title,
-                        date = nextEvent.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                        date = nextEvent.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
                         comment = event.comment,
                         isBirthday = false,
                         daysLeft = recurringDaysLeft
@@ -432,7 +448,7 @@ class ContactRepository(
                 } else if (daysLeft >= 0) {
                     dateItems.add(DateItem(
                         contactId = event.contactId,
-                        contactName = contact?.name ?: "Неизвестный контакт",
+                        contactName = contact?.name.orEmpty(),
                         title = event.title,
                         date = event.date,
                         comment = event.comment,

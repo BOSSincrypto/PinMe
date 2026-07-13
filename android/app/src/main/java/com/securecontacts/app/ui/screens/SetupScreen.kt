@@ -1,5 +1,7 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.localized
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -46,7 +48,7 @@ fun SetupBackupPasswordScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Добро пожаловать в Защищённые Контакты",
+            text = localized("Добро пожаловать в Защищённые Контакты"),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -55,7 +57,7 @@ fun SetupBackupPasswordScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Давайте настроим ваши пароли безопасности",
+            text = localized("Давайте настроим ваши пароли безопасности"),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -91,14 +93,14 @@ fun SetupBackupPasswordScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Резервный пароль",
+                            text = localized("Резервный пароль"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
                     Text(
-                        text = "Минимум 8 символов. Пароль используется для зашифрованного экспорта/импорта и экстренного доступа к данным.",
+                        text = localized("Минимум 8 символов. Пароль используется для зашифрованного экспорта/импорта и экстренного доступа к данным."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -106,7 +108,7 @@ fun SetupBackupPasswordScreen(
                     OutlinedTextField(
                         value = backupPassword,
                         onValueChange = { backupPassword = it },
-                        label = { Text("Резервный пароль") },
+                        label = { Text(localized("Резервный пароль")) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -114,7 +116,7 @@ fun SetupBackupPasswordScreen(
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = "Показать или скрыть пароль"
+                                    contentDescription = localized("Показать или скрыть пароль")
                                 )
                             }
                         }
@@ -123,13 +125,13 @@ fun SetupBackupPasswordScreen(
                     OutlinedTextField(
                         value = confirmBackupPassword,
                         onValueChange = { confirmBackupPassword = it },
-                        label = { Text("Подтвердите резервный пароль") },
+                        label = { Text(localized("Подтвердите резервный пароль")) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         isError = confirmBackupPassword.isNotEmpty() && backupPassword != confirmBackupPassword,
                         supportingText = if (confirmBackupPassword.isNotEmpty() && backupPassword != confirmBackupPassword) {
-                            { Text("Пароли не совпадают") }
+                            { Text(localized("Пароли не совпадают")) }
                         } else null
                     )
 
@@ -138,7 +140,7 @@ fun SetupBackupPasswordScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = isBackupPasswordValid
                     ) {
-                        Text("Далее")
+                        Text(localized("Далее"))
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(Icons.Default.ArrowForward, contentDescription = null)
                     }
@@ -152,14 +154,14 @@ fun SetupBackupPasswordScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Пароль помощи",
+                            text = localized("Пароль помощи"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
                     Text(
-                        text = "Минимум 8 символов. Это вторичный пароль для помощи, он должен отличаться от резервного.",
+                        text = localized("Минимум 8 символов. Это вторичный пароль для помощи, он должен отличаться от резервного."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -167,7 +169,7 @@ fun SetupBackupPasswordScreen(
                     OutlinedTextField(
                         value = helpPassword,
                         onValueChange = { helpPassword = it },
-                        label = { Text("Пароль помощи") },
+                        label = { Text(localized("Пароль помощи")) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -175,7 +177,7 @@ fun SetupBackupPasswordScreen(
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = "Показать или скрыть пароль"
+                                    contentDescription = localized("Показать или скрыть пароль")
                                 )
                             }
                         }
@@ -184,15 +186,15 @@ fun SetupBackupPasswordScreen(
                     OutlinedTextField(
                         value = confirmHelpPassword,
                         onValueChange = { confirmHelpPassword = it },
-                        label = { Text("Подтвердите пароль помощи") },
+                        label = { Text(localized("Подтвердите пароль помощи")) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         isError = confirmHelpPassword.isNotEmpty() && helpPassword != confirmHelpPassword,
                         supportingText = if (confirmHelpPassword.isNotEmpty() && helpPassword != confirmHelpPassword) {
-                            { Text("Пароли не совпадают") }
+                            { Text(localized("Пароли не совпадают")) }
                         } else if (helpPassword.isNotEmpty() && helpPassword == backupPassword) {
-                            { Text("Пароль помощи должен отличаться от резервного") }
+                            { Text(localized("Пароль помощи должен отличаться от резервного")) }
                         } else null
                     )
 
@@ -206,7 +208,7 @@ fun SetupBackupPasswordScreen(
                         ) {
                             Icon(Icons.Default.ArrowBack, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Назад")
+                            Text(localized("Назад"))
                         }
 
                         Button(
@@ -214,7 +216,7 @@ fun SetupBackupPasswordScreen(
                             modifier = Modifier.weight(1f),
                             enabled = isHelpPasswordValid
                         ) {
-                            Text("Готово")
+                            Text(localized("Готово"))
                             Spacer(modifier = Modifier.width(8.dp))
                             Icon(Icons.Default.Check, contentDescription = null)
                         }
@@ -226,7 +228,7 @@ fun SetupBackupPasswordScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Запомните эти пароли! Их нельзя восстановить при утере.",
+            text = localized("Запомните эти пароли! Их нельзя восстановить при утере."),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
             textAlign = TextAlign.Center
@@ -250,33 +252,33 @@ fun UnlockContactDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Разблокировать контакт",
+                text = localized("Разблокировать контакт"),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    text = "Введите пароль для просмотра защищённой информации $contactName",
+                    text = localized("Введите пароль для просмотра защищённой информации %s", contactName),
                     style = MaterialTheme.typography.bodyMedium
                 )
 
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Пароль") },
+                    label = { Text(localized("Пароль")) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     isError = isError,
                     supportingText = if (isError) {
-                        { Text("Неверный пароль") }
+                        { Text(localized("Неверный пароль")) }
                     } else null,
                     trailingIcon = {
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = "Показать или скрыть пароль"
+                                contentDescription = localized("Показать или скрыть пароль")
                             )
                         }
                     }
@@ -289,7 +291,7 @@ fun UnlockContactDialog(
                     ) {
                         Icon(Icons.Default.Fingerprint, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Использовать отпечаток")
+                        Text(localized("Использовать отпечаток"))
                     }
                 }
             }
@@ -299,12 +301,12 @@ fun UnlockContactDialog(
                 onClick = { onPasswordSubmit(password) },
                 enabled = password.isNotBlank()
             ) {
-                Text("Разблокировать")
+                Text(localized("Разблокировать"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(localized("Отмена"))
             }
         }
     )

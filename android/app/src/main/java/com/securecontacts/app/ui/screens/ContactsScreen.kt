@@ -1,5 +1,7 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.localized
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -32,7 +34,7 @@ import com.securecontacts.app.data.model.Contact
 import com.securecontacts.app.data.model.Tag
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,17 +56,17 @@ fun ContactsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val activeCount = allContacts.count { it.isActive }
+    val activeCount = allContacts.count(Contact::isActive)
     val inactiveCount = allContacts.size - activeCount
-    val displayContacts = if (showActiveOnly) contacts.filter { it.isActive } else contacts
+    val displayContacts = if (showActiveOnly) contacts.filter(Contact::isActive) else contacts
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Контакты") },
+                title = { Text(localized("Контакты")) },
                 actions = {
                     IconButton(onClick = onSearchClick) {
-                        Icon(Icons.Default.Search, contentDescription = "Поиск")
+                        Icon(Icons.Default.Search, contentDescription = localized("Поиск"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -77,7 +79,7 @@ fun ContactsScreen(
                 onClick = onAddContactClick,
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Добавить контакт")
+                Icon(Icons.Default.Add, contentDescription = localized("Добавить контакт"))
             }
         }
     ) { paddingValues ->
@@ -93,12 +95,12 @@ fun ContactsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Поиск контактов...") },
+                placeholder = { Text(localized("Поиск контактов...")) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { onSearchQueryChange("") }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Очистить")
+                            Icon(Icons.Default.Clear, contentDescription = localized("Очистить"))
                         }
                     }
                 },
@@ -118,16 +120,17 @@ fun ContactsScreen(
                         FilterChip(
                             selected = selectedTagId == null,
                             onClick = { onTagFilterClick(null) },
-                            label = { Text("Все") }
+                            label = { Text(localized("Все")) }
                         )
                     }
                     items(tags) { tag ->
+                        val tagColor = remember(tag.color) { parseTagColor(tag.color) }
                         FilterChip(
                             selected = selectedTagId == tag.id,
                             onClick = { onTagFilterClick(tag.id) },
                             label = { Text(tag.name) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(android.graphics.Color.parseColor(tag.color)).copy(alpha = 0.3f)
+                                selectedContainerColor = tagColor.copy(alpha = 0.3f)
                             )
                         )
                     }
@@ -143,7 +146,7 @@ fun ContactsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Только активные",
+                    text = localized("Только активные"),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Switch(
@@ -169,7 +172,7 @@ fun ContactsScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            "Контакты не найдены",
+                            localized("Контакты не найдены"),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -201,7 +204,7 @@ fun ContactsScreen(
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     val clip = ClipData.newPlainText("phone", contact.phone)
                                     clipboard.setPrimaryClip(clip)
-                                    Toast.makeText(context, "Номер скопирован", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, localized("Номер скопирован"), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         )
@@ -218,7 +221,7 @@ fun ContactsScreen(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Всего: ${allContacts.size} | Активных: $activeCount | Неактивных: $inactiveCount",
+                    text = localized("Всего: %d | Активных: %d | Неактивных: %d", allContacts.size, activeCount, inactiveCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -236,6 +239,7 @@ fun ContactCard(
     onCopyClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val birthdayFormatter = rememberDateFormatter("dd MMM")
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -262,7 +266,7 @@ fun ContactCard(
                 if (contact.avatarUri != null) {
                     AsyncImage(
                         model = contact.avatarUri,
-                        contentDescription = "Аватар",
+                        contentDescription = localized("Аватар"),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -299,10 +303,10 @@ fun ContactCard(
 
                 if (contact.birthday != null) {
                     val birthdayDate = Instant.ofEpochMilli(contact.birthday)
-                        .atZone(ZoneId.systemDefault())
+                        .atZone(ZoneOffset.UTC)
                         .toLocalDate()
                     Text(
-                        text = "ДР: ${birthdayDate.format(DateTimeFormatter.ofPattern("dd MMM"))}",
+                        text = localized("ДР: %s", birthdayDate.format(birthdayFormatter)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -315,15 +319,16 @@ fun ContactCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(tags.take(3)) { tag ->
+                            val tagColor = remember(tag.color) { parseTagColor(tag.color) }
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
-                                color = Color(android.graphics.Color.parseColor(tag.color)).copy(alpha = 0.3f)
+                                color = tagColor.copy(alpha = 0.3f)
                             ) {
                                 Text(
                                     text = tag.name,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color(android.graphics.Color.parseColor(tag.color))
+                                    color = tagColor
                                 )
                             }
                         }
@@ -345,7 +350,7 @@ fun ContactCard(
                 IconButton(onClick = onCopyClick) {
                     Icon(
                         Icons.Default.ContentCopy,
-                        contentDescription = "Копировать номер",
+                        contentDescription = localized("Копировать номер"),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -356,7 +361,7 @@ fun ContactCard(
                 IconButton(onClick = onCallClick) {
                     Icon(
                         Icons.Default.Phone,
-                        contentDescription = "Позвонить",
+                        contentDescription = localized("Позвонить"),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -365,7 +370,7 @@ fun ContactCard(
             // Lock icon
             Icon(
                 Icons.Default.Lock,
-                contentDescription = "Защищено",
+                contentDescription = localized("Защищено"),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )

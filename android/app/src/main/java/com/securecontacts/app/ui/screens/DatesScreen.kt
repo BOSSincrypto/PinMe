@@ -1,5 +1,7 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.localized
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.securecontacts.app.data.model.DateItem
 import java.time.Instant
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,7 +30,7 @@ fun DatesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Даты") },
+                title = { Text(localized("Даты")) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -51,7 +53,7 @@ fun DatesScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "Нет предстоящих дат",
+                        localized("Нет предстоящих дат"),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -82,6 +84,7 @@ fun DateItemCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val dateFormatter = rememberDateFormatter("dd MMMM yyyy")
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -120,12 +123,12 @@ fun DateItemCard(
             // Info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (dateItem.contactName == "Unknown") "Неизвестный" else dateItem.contactName,
+                    text = if (dateItem.contactName.isBlank()) localized("Неизвестный") else dateItem.contactName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = if (dateItem.isBirthday) "День рождения" else dateItem.title,
+                    text = if (dateItem.isBirthday) localized("День рождения") else dateItem.title,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -138,10 +141,10 @@ fun DateItemCard(
                 }
 
                 val date = Instant.ofEpochMilli(dateItem.date)
-                    .atZone(ZoneId.systemDefault())
+                    .atZone(ZoneOffset.UTC)
                     .toLocalDate()
                 Text(
-                    text = date.format(DateTimeFormatter.ofPattern("dd MMMM yyyy")),
+                    text = date.format(dateFormatter),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -152,7 +155,7 @@ fun DateItemCard(
                 when {
                     dateItem.daysLeft == 0 -> {
                         Text(
-                            text = "Сегодня!",
+                            text = localized("Сегодня!"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -160,7 +163,7 @@ fun DateItemCard(
                     }
                     dateItem.daysLeft == 1 -> {
                         Text(
-                            text = "Завтра",
+                            text = localized("Завтра"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.secondary
@@ -168,7 +171,7 @@ fun DateItemCard(
                     }
                     dateItem.daysLeft <= 7 -> {
                         Text(
-                            text = "${dateItem.daysLeft} дн.",
+                            text = localized("%d дн.", dateItem.daysLeft),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -176,12 +179,12 @@ fun DateItemCard(
                     dateItem.daysLeft <= 30 -> {
                         val weeks = dateItem.daysLeft / 7
                         Text(
-                            text = if (weeks == 1) "1 нед." else "$weeks нед.",
+                            text = if (weeks == 1) localized("1 нед.") else localized("%d нед.", weeks),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "(${dateItem.daysLeft} дн.)",
+                            text = localized("(%d дн.)", dateItem.daysLeft),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -189,12 +192,12 @@ fun DateItemCard(
                     else -> {
                         val months = dateItem.daysLeft / 30
                         Text(
-                            text = if (months == 1) "1 мес." else "$months мес.",
+                            text = if (months == 1) localized("1 мес.") else localized("%d мес.", months),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "(${dateItem.daysLeft} дн.)",
+                            text = localized("(%d дн.)", dateItem.daysLeft),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -204,7 +207,7 @@ fun DateItemCard(
                 // Age for birthdays
                 if (dateItem.isBirthday && dateItem.age != null) {
                     Text(
-                        text = "${dateItem.age} лет",
+                        text = localized("%d лет", dateItem.age),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )

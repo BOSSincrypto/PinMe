@@ -1,5 +1,7 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.localized
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -49,7 +51,7 @@ fun AppLockScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Защищённые Контакты",
+                text = localized("Защищённые Контакты"),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -57,7 +59,7 @@ fun AppLockScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Введите пароль для входа",
+                text = localized("Введите пароль для входа"),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -70,12 +72,12 @@ fun AppLockScreen(
                     password = it
                     isError = false
                 },
-                label = { Text("Пароль") },
+                label = { Text(localized("Пароль")) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 isError = isError,
                 supportingText = if (isError) {
-                    { Text("Неверный пароль") }
+                    { Text(localized("Неверный пароль")) }
                 } else null,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
@@ -98,7 +100,7 @@ fun AppLockScreen(
             ) {
                 Icon(Icons.Default.LockOpen, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Войти")
+                Text(localized("Войти"))
             }
 
             if (onBiometricClick != null) {
@@ -110,7 +112,7 @@ fun AppLockScreen(
                 ) {
                     Icon(Icons.Default.Fingerprint, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Использовать отпечаток")
+                    Text(localized("Использовать отпечаток"))
                 }
             }
         }

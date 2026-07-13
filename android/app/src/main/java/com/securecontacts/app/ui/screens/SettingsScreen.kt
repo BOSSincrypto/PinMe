@@ -1,5 +1,7 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.localized
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,7 +42,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Настройки") },
+                title = { Text(localized("Настройки")) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -66,7 +68,7 @@ fun SettingsScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "Внешний вид",
+                            text = localized("Внешний вид"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -86,11 +88,11 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column {
                                     Text(
-                                        text = "Тёмная тема (AMOLED)",
+                                        text = localized("Тёмная тема (AMOLED)"),
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                     Text(
-                                        text = "Чёрный фон для OLED экранов",
+                                        text = localized("Чёрный фон для OLED экранов"),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -117,7 +119,7 @@ fun SettingsScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "Блокировка приложения",
+                            text = localized("Блокировка приложения"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -137,11 +139,11 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column {
                                     Text(
-                                        text = "Пароль при входе",
+                                        text = localized("Пароль при входе"),
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                     Text(
-                                        text = if (isAppLockEnabled) "Включено" else "Выключено",
+                                        text = if (isAppLockEnabled) localized("Включено") else localized("Выключено"),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -149,11 +151,11 @@ fun SettingsScreen(
                             }
                             if (isAppLockEnabled) {
                                 TextButton(onClick = onRemoveAppLock) {
-                                    Text("Убрать")
+                                    Text(localized("Убрать"))
                                 }
                             } else {
                                 TextButton(onClick = { showSetupAppLockDialog = true }) {
-                                    Text("Установить")
+                                    Text(localized("Установить"))
                                 }
                             }
                         }
@@ -183,11 +185,11 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "История разговоров",
+                                text = localized("История разговоров"),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                             Text(
-                                text = "Все записи о разговорах с контактами",
+                                text = localized("Все записи о разговорах с контактами"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -213,7 +215,7 @@ fun SettingsScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "Безопасность",
+                            text = localized("Безопасность"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -234,11 +236,11 @@ fun SettingsScreen(
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column {
                                         Text(
-                                            text = "Биометрическая разблокировка",
+                                            text = localized("Биометрическая разблокировка"),
                                             style = MaterialTheme.typography.bodyLarge
                                         )
                                         Text(
-                                            text = "Использовать отпечаток для разблокировки",
+                                            text = localized("Использовать отпечаток для разблокировки"),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -268,11 +270,11 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Изменить резервный пароль",
+                                    text = localized("Изменить резервный пароль"),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                                 Text(
-                                    text = "Используется для зашифрованного экспорта/импорта",
+                                    text = localized("Используется для зашифрованного экспорта/импорта"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -300,11 +302,11 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Изменить пароль помощи",
+                                    text = localized("Изменить пароль помощи"),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                                 Text(
-                                    text = "Вторичный пароль для помощи",
+                                    text = localized("Вторичный пароль для помощи"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -331,7 +333,7 @@ fun SettingsScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "Управление данными",
+                            text = localized("Управление данными"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -352,7 +354,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(
-                                text = "Управление тегами",
+                                text = localized("Управление тегами"),
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.weight(1f)
                             )
@@ -378,7 +380,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(
-                                text = "Управление категориями",
+                                text = localized("Управление категориями"),
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.weight(1f)
                             )
@@ -404,7 +406,7 @@ fun SettingsScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "Экспорт",
+                            text = localized("Экспорт"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -426,11 +428,11 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Экспорт с шифрованием",
+                                    text = localized("Экспорт с шифрованием"),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                                 Text(
-                                    text = "Защищённая резервная копия с паролем",
+                                    text = localized("Защищённая резервная копия с паролем"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -457,11 +459,11 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Открытый экспорт",
+                                    text = localized("Открытый экспорт"),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                                 Text(
-                                    text = "JSON без шифрования, доступен после проверки резервного пароля",
+                                    text = localized("JSON без шифрования, доступен после проверки резервного пароля"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error
                                 )
@@ -488,7 +490,7 @@ fun SettingsScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "Импорт",
+                            text = localized("Импорт"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -510,11 +512,11 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Импорт с шифрованием",
+                                    text = localized("Импорт с шифрованием"),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                                 Text(
-                                    text = "Восстановление из зашифрованной копии",
+                                    text = localized("Восстановление из зашифрованной копии"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -541,11 +543,11 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Открытый импорт",
+                                    text = localized("Открытый импорт"),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                                 Text(
-                                    text = "Импорт JSON без шифрования после проверки резервного пароля",
+                                    text = localized("Импорт JSON без шифрования после проверки резервного пароля"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error
                                 )
@@ -573,18 +575,18 @@ fun SettingsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Защищённые Контакты",
+                            text = localized("Защищённые Контакты"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Версия 1.0",
+                            text = localized("Версия 1.0"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Оптимизировано для Nubia Z50 Ultra",
+                                text = localized("Оптимизировано для Android-устройств"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -615,26 +617,26 @@ fun SetupAppLockDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Установить пароль для входа") },
+        title = { Text(localized("Установить пароль для входа")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Этот пароль будет запрашиваться при каждом запуске приложения")
+                Text(localized("Этот пароль будет запрашиваться при каждом запуске приложения"))
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Пароль") },
+                    label = { Text(localized("Пароль")) },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation()
                 )
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
-                    label = { Text("Подтвердите пароль") },
+                    label = { Text(localized("Подтвердите пароль")) },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     isError = confirmPassword.isNotEmpty() && password != confirmPassword,
                     supportingText = if (confirmPassword.isNotEmpty() && password != confirmPassword) {
-                        { Text("Пароли не совпадают") }
+                        { Text(localized("Пароли не совпадают")) }
                     } else null
                 )
             }
@@ -644,12 +646,12 @@ fun SetupAppLockDialog(
                 onClick = { onConfirm(password) },
                 enabled = password.isNotBlank() && password == confirmPassword
             ) {
-                Text("Установить")
+                Text(localized("Установить"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(localized("Отмена"))
             }
         }
     )
@@ -673,26 +675,26 @@ fun ChangePasswordDialog(
                 OutlinedTextField(
                     value = oldPassword,
                     onValueChange = { oldPassword = it },
-                    label = { Text("Текущий пароль") },
+                    label = { Text(localized("Текущий пароль")) },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation()
                 )
                 OutlinedTextField(
                     value = newPassword,
                     onValueChange = { newPassword = it },
-                    label = { Text("Новый пароль") },
+                    label = { Text(localized("Новый пароль")) },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation()
                 )
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
-                    label = { Text("Подтвердите новый пароль") },
+                    label = { Text(localized("Подтвердите новый пароль")) },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     isError = confirmPassword.isNotEmpty() && newPassword != confirmPassword,
                     supportingText = if (confirmPassword.isNotEmpty() && newPassword != confirmPassword) {
-                        { Text("Пароли не совпадают") }
+                        { Text(localized("Пароли не совпадают")) }
                     } else null
                 )
             }
@@ -702,12 +704,12 @@ fun ChangePasswordDialog(
                 onClick = { onConfirm(oldPassword, newPassword) },
                 enabled = oldPassword.isNotBlank() && newPassword.length >= 8 && newPassword == confirmPassword
             ) {
-                Text("Изменить")
+                Text(localized("Изменить"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(localized("Отмена"))
             }
         }
     )
@@ -731,7 +733,7 @@ fun PasswordInputDialog(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Пароль") },
+                    label = { Text(localized("Пароль")) },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation()
                 )
@@ -742,12 +744,12 @@ fun PasswordInputDialog(
                 onClick = { onConfirm(password) },
                 enabled = password.isNotBlank()
             ) {
-                Text("Подтвердить")
+                Text(localized("Подтвердить"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(localized("Отмена"))
             }
         }
     )

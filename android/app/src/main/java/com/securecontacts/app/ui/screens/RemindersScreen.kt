@@ -1,5 +1,7 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.localized
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,7 +20,7 @@ import com.securecontacts.app.data.model.Contact
 import com.securecontacts.app.data.model.Reminder
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
@@ -47,12 +49,12 @@ fun RemindersScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Напоминания") },
+                title = { Text(localized("Напоминания")) },
                 actions = {
                     IconButton(onClick = { showCompleted = !showCompleted }) {
                         Icon(
                             if (showCompleted) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = if (showCompleted) "Скрыть завершённые" else "Показать завершённые"
+                            contentDescription = if (showCompleted) localized("Скрыть завершённые") else localized("Показать завершённые")
                         )
                     }
                 },
@@ -78,7 +80,7 @@ fun RemindersScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        if (showCompleted) "Нет напоминаний" else "Нет активных напоминаний",
+                        if (showCompleted) localized("Нет напоминаний") else localized("Нет активных напоминаний"),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -96,15 +98,15 @@ fun RemindersScreen(
                 val today = LocalDate.now()
                 val overdue = filteredReminders.filter { rwc ->
                     rwc.reminder.date != null && !rwc.reminder.isCompleted &&
-                    Instant.ofEpochMilli(rwc.reminder.date).atZone(ZoneId.systemDefault()).toLocalDate().isBefore(today)
+                    Instant.ofEpochMilli(rwc.reminder.date).atZone(ZoneOffset.UTC).toLocalDate().isBefore(today)
                 }
                 val todayReminders = filteredReminders.filter { rwc ->
                     rwc.reminder.date != null && !rwc.reminder.isCompleted &&
-                    Instant.ofEpochMilli(rwc.reminder.date).atZone(ZoneId.systemDefault()).toLocalDate().isEqual(today)
+                    Instant.ofEpochMilli(rwc.reminder.date).atZone(ZoneOffset.UTC).toLocalDate().isEqual(today)
                 }
                 val upcoming = filteredReminders.filter { rwc ->
                     rwc.reminder.date != null && !rwc.reminder.isCompleted &&
-                    Instant.ofEpochMilli(rwc.reminder.date).atZone(ZoneId.systemDefault()).toLocalDate().isAfter(today)
+                    Instant.ofEpochMilli(rwc.reminder.date).atZone(ZoneOffset.UTC).toLocalDate().isAfter(today)
                 }
                 val noDate = filteredReminders.filter { rwc ->
                     rwc.reminder.date == null && !rwc.reminder.isCompleted
@@ -114,7 +116,7 @@ fun RemindersScreen(
                 if (overdue.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Просрочено",
+                            text = localized("Просрочено"),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.Bold,
@@ -135,7 +137,7 @@ fun RemindersScreen(
                 if (todayReminders.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Сегодня",
+                            text = localized("Сегодня"),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
@@ -156,7 +158,7 @@ fun RemindersScreen(
                 if (upcoming.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Предстоящие",
+                            text = localized("Предстоящие"),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -175,7 +177,7 @@ fun RemindersScreen(
                 if (noDate.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Без даты",
+                            text = localized("Без даты"),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -194,7 +196,7 @@ fun RemindersScreen(
                 if (showCompleted && completed.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Завершено",
+                            text = localized("Завершено"),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold,
@@ -229,6 +231,7 @@ fun ReminderCard(
 ) {
     val reminder = reminderWithContact.reminder
     val contact = reminderWithContact.contact
+    val dateFormatter = rememberDateFormatter("dd MMM yyyy")
 
     Card(
         modifier = modifier
@@ -278,7 +281,7 @@ fun ReminderCard(
 
                 if (reminder.date != null) {
                     val reminderDate = Instant.ofEpochMilli(reminder.date)
-                        .atZone(ZoneId.systemDefault())
+                        .atZone(ZoneOffset.UTC)
                         .toLocalDate()
                     val today = LocalDate.now()
                     val daysUntil = ChronoUnit.DAYS.between(today, reminderDate).toInt()
@@ -296,7 +299,7 @@ fun ReminderCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = reminderDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
+                            text = reminderDate.format(dateFormatter),
                             style = MaterialTheme.typography.bodySmall,
                             color = when {
                                 isOverdue -> MaterialTheme.colorScheme.error
@@ -306,7 +309,11 @@ fun ReminderCard(
                         )
                         if (!isCompleted && daysUntil != 0) {
                             Text(
-                                text = if (daysUntil < 0) " (${-daysUntil} дн. назад)" else " (через $daysUntil дн.)",
+                                text = if (daysUntil < 0) {
+                                    localized(" (%d дн. назад)", -daysUntil)
+                                } else {
+                                    localized(" (через %d дн.)", daysUntil)
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -327,7 +334,7 @@ fun ReminderCard(
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Удалить",
+                    contentDescription = localized("Удалить"),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

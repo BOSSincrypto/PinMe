@@ -1,5 +1,7 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.localized
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -44,10 +46,10 @@ fun TagManagementScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Управление тегами") },
+                title = { Text(localized("Управление тегами")) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.Default.ArrowBack, contentDescription = localized("Назад"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -60,7 +62,7 @@ fun TagManagementScreen(
                 onClick = { showCreateDialog = true },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Добавить тег")
+                Icon(Icons.Default.Add, contentDescription = localized("Добавить тег"))
             }
         }
     ) { paddingValues ->
@@ -80,13 +82,13 @@ fun TagManagementScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "Тегов пока нет",
+                        localized("Тегов пока нет"),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = { showCreateDialog = true }) {
-                        Text("Создать первый тег")
+                        Text(localized("Создать первый тег"))
                     }
                 }
             }
@@ -155,7 +157,7 @@ fun TagItem(
                 modifier = Modifier
                     .size(24.dp)
                     .clip(CircleShape)
-                    .background(Color(android.graphics.Color.parseColor(tag.color)))
+                    .background(parseTagColor(tag.color))
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
@@ -165,10 +167,10 @@ fun TagItem(
                 modifier = Modifier.weight(1f)
             )
             IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = "Редактировать")
+                Icon(Icons.Default.Edit, contentDescription = localized("Редактировать"))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                Icon(Icons.Default.Delete, contentDescription = localized("Удалить"))
             }
         }
     }
@@ -185,19 +187,19 @@ fun CreateEditTagDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (tag == null) "Создать тег" else "Редактировать тег") },
+        title = { Text(if (tag == null) localized("Создать тег") else localized("Редактировать тег")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Название тега") },
+                    label = { Text(localized("Название тега")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Text(
-                    text = "Цвет",
+                    text = localized("Цвет"),
                     style = MaterialTheme.typography.labelMedium
                 )
 
@@ -209,14 +211,14 @@ fun CreateEditTagDialog(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Color(android.graphics.Color.parseColor(color)))
+                                .background(parseTagColor(color))
                                 .clickable { selectedColor = color },
                             contentAlignment = Alignment.Center
                         ) {
                             if (selectedColor == color) {
                                 Icon(
                                     Icons.Default.Check,
-                                    contentDescription = "Выбрано",
+                                    contentDescription = localized("Выбрано"),
                                     tint = Color.White
                                 )
                             }
@@ -230,12 +232,12 @@ fun CreateEditTagDialog(
                 onClick = { onConfirm(name, selectedColor) },
                 enabled = name.isNotBlank()
             ) {
-                Text(if (tag == null) "Создать" else "Сохранить")
+                Text(if (tag == null) localized("Создать") else localized("Сохранить"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(localized("Отмена"))
             }
         }
     )
@@ -257,10 +259,10 @@ fun CategoryManagementScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Управление категориями") },
+                title = { Text(localized("Управление категориями")) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.Default.ArrowBack, contentDescription = localized("Назад"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -273,7 +275,7 @@ fun CategoryManagementScreen(
                 onClick = { showCreateDialog = true },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Добавить категорию")
+                Icon(Icons.Default.Add, contentDescription = localized("Добавить категорию"))
             }
         }
     ) { paddingValues ->
@@ -293,13 +295,13 @@ fun CategoryManagementScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "Категорий пока нет",
+                        localized("Категорий пока нет"),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = { showCreateDialog = true }) {
-                        Text("Создать первую категорию")
+                        Text(localized("Создать первую категорию"))
                     }
                 }
             }
@@ -368,7 +370,7 @@ fun CategoryItem(
                 modifier = Modifier
                     .size(24.dp)
                     .clip(CircleShape)
-                    .background(Color(android.graphics.Color.parseColor(category.color)))
+                    .background(parseTagColor(category.color))
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
@@ -378,10 +380,10 @@ fun CategoryItem(
                 modifier = Modifier.weight(1f)
             )
             IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = "Редактировать")
+                Icon(Icons.Default.Edit, contentDescription = localized("Редактировать"))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                Icon(Icons.Default.Delete, contentDescription = localized("Удалить"))
             }
         }
     }
@@ -398,19 +400,19 @@ fun CreateEditCategoryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (category == null) "Создать категорию" else "Редактировать категорию") },
+        title = { Text(if (category == null) localized("Создать категорию") else localized("Редактировать категорию")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Название категории") },
+                    label = { Text(localized("Название категории")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Text(
-                    text = "Цвет",
+                    text = localized("Цвет"),
                     style = MaterialTheme.typography.labelMedium
                 )
 
@@ -422,14 +424,14 @@ fun CreateEditCategoryDialog(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Color(android.graphics.Color.parseColor(color)))
+                                .background(parseTagColor(color))
                                 .clickable { selectedColor = color },
                             contentAlignment = Alignment.Center
                         ) {
                             if (selectedColor == color) {
                                 Icon(
                                     Icons.Default.Check,
-                                    contentDescription = "Выбрано",
+                                    contentDescription = localized("Выбрано"),
                                     tint = Color.White
                                 )
                             }
@@ -443,12 +445,12 @@ fun CreateEditCategoryDialog(
                 onClick = { onConfirm(name, selectedColor) },
                 enabled = name.isNotBlank()
             ) {
-                Text(if (category == null) "Создать" else "Сохранить")
+                Text(if (category == null) localized("Создать") else localized("Сохранить"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(localized("Отмена"))
             }
         }
     )
