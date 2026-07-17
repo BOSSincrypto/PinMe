@@ -36,4 +36,12 @@ class LocalizedTextTest {
         assertEquals("Импортировано: 2 контактов", localized("Импортировано: %d контактов", 2))
         assertEquals("Версия 1.0.0-alpha.1", localized("Версия %s", "1.0.0-alpha.1"))
     }
+
+    @Test
+    fun returnsRussianTextForRegionalRussianLocale() {
+        Locale.setDefault(Locale("ru", "RU"))
+
+        assertEquals("Настройки", localized("Настройки"))
+        assertEquals("Ошибка: файл не найден", localized("Ошибка: %s", "файл не найден"))
+    }
 }

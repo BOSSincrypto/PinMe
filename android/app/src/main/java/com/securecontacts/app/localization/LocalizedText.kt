@@ -3,7 +3,11 @@ package com.securecontacts.app.localization
 import java.util.Locale
 
 fun localized(value: String, vararg formatArgs: Any): String {
-    val template = if (Locale.getDefault().language == "en") englishText[value] ?: value else value
+    val template = when (Locale.getDefault().language) {
+        "en" -> englishText[value] ?: value
+        "ru" -> value
+        else -> value
+    }
     return if (formatArgs.isEmpty()) template else String.format(Locale.getDefault(), template, *formatArgs)
 }
 

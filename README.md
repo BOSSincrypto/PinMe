@@ -56,6 +56,8 @@ npm audit --audit-level=high
 - `Android Alpha Release`: подписанный release APK, проверка подписи, SHA-256 checksum и публикация GitHub Release
 - Dependabot: еженедельные обновления npm, Gradle и GitHub Actions
 
+Android-приложение поддерживает русский язык (основной язык) и English. Язык выбирается настройками языка Android; для неизвестной локали используется русский текст.
+
 CI сохраняет debug APK как временный artifact на 14 дней. Этот artifact не является каналом обновлений.
 
 ## Автоматические APK
