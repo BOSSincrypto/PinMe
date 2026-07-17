@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.securecontacts.app.localization.AppLanguage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -19,6 +20,7 @@ class PreferencesManager(private val context: Context) {
         private val HELP_PASSWORD_SALT = stringPreferencesKey("help_password_salt")
         private val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
         private val DARK_THEME_ENABLED = booleanPreferencesKey("dark_theme_enabled")
+        private val APP_LANGUAGE = stringPreferencesKey("app_language")
         private val FIRST_LAUNCH = booleanPreferencesKey("first_launch")
         private val APP_LOCK_PASSWORD_HASH = stringPreferencesKey("app_lock_password_hash")
         private val APP_LOCK_PASSWORD_SALT = stringPreferencesKey("app_lock_password_salt")
@@ -44,6 +46,16 @@ class PreferencesManager(private val context: Context) {
 
     val isDarkThemeEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[DARK_THEME_ENABLED] ?: true
+    }
+
+    val appLanguage: Flow<AppLanguage> = context.dataStore.data.map { prefs ->
+        AppLanguage.fromCode(prefs[APP_LANGUAGE])
+    }
+
+    suspend fun setAppLanguage(language: AppLanguage) {
+        context.dataStore.edit { prefs ->
+            prefs[APP_LANGUAGE] = language.code
+        }
     }
 
     suspend fun setFirstLaunchComplete() {

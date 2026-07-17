@@ -1,5 +1,6 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.appLocale
 import com.securecontacts.app.localization.localized
 
 import android.net.Uri
@@ -354,7 +355,7 @@ fun CreateEditContactScreen(
                                 Instant.ofEpochMilli(it)
                                     .atZone(ZoneOffset.UTC)
                                     .toLocalDate()
-                                    .format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
+                                    .format(DateTimeFormatter.ofPattern("dd MMM yyyy", appLocale()))
                             } ?: "",
                             onValueChange = {},
                             label = { Text(localized("День рождения")) },
@@ -642,7 +643,7 @@ fun CreateEditContactScreen(
                                         .atZone(ZoneOffset.UTC)
                                         .toLocalDate()
                                     Text(
-                                        text = eventDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
+                                        text = eventDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy", appLocale())),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -701,7 +702,7 @@ fun CreateEditContactScreen(
                                             .atZone(ZoneOffset.UTC)
                                             .toLocalDate()
                                         Text(
-                                            text = reminderDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
+                                        text = reminderDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy", appLocale())),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -925,7 +926,7 @@ fun AddEventDialog(
                         Instant.ofEpochMilli(it)
                             .atZone(ZoneOffset.UTC)
                             .toLocalDate()
-                            .format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
+                            .format(DateTimeFormatter.ofPattern("dd MMM yyyy", appLocale()))
                     } ?: localized("Выберите дату"),
                     onValueChange = {},
                     label = { Text(localized("Дата")) },
@@ -1016,7 +1017,7 @@ fun AddReminderDialog(
                             Instant.ofEpochMilli(it)
                                 .atZone(ZoneOffset.UTC)
                                 .toLocalDate()
-                                .format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
+                                .format(DateTimeFormatter.ofPattern("dd MMM yyyy", appLocale()))
                         } ?: localized("Выберите дату"),
                         onValueChange = {},
                         label = { Text(localized("Дата")) },

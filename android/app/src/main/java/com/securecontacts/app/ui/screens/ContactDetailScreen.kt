@@ -1,5 +1,6 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.appLocale
 import com.securecontacts.app.localization.localized
 
 import android.content.Intent
@@ -536,7 +537,7 @@ fun ContactDetailScreen(
                                     .atZone(ZoneOffset.UTC)
                                     .toLocalDate()
                                 Text(
-                                    text = birthdayDate.format(DateTimeFormatter.ofPattern("dd MMMM yyyy")),
+                                    text = birthdayDate.format(DateTimeFormatter.ofPattern("dd MMMM yyyy", appLocale())),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
@@ -727,7 +728,7 @@ fun ContactDetailScreen(
                                             fontWeight = FontWeight.Medium
                                         )
                                         Text(
-                                            text = eventDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
+                                            text = eventDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy", appLocale())),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -798,7 +799,7 @@ fun ContactDetailScreen(
                                                 .atZone(ZoneOffset.UTC)
                                                 .toLocalDate()
                                             Text(
-                                                text = reminderDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
+                                                text = reminderDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy", appLocale())),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -931,7 +932,7 @@ fun ContactDetailScreen(
                                     ) {
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = convDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
+                                                text = convDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy", appLocale())),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 color = MaterialTheme.colorScheme.primary
                                             )
@@ -1036,7 +1037,7 @@ fun AddConversationDialog(
                     value = Instant.ofEpochMilli(selectedDate)
                         .atZone(ZoneOffset.UTC)
                         .toLocalDate()
-                        .format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
+                        .format(DateTimeFormatter.ofPattern("dd MMM yyyy", appLocale())),
                     onValueChange = {},
                     label = { Text(localized("Дата")) },
                     modifier = Modifier

@@ -1,6 +1,9 @@
 package com.securecontacts.app
 
+import com.securecontacts.app.localization.AppLanguage
+import com.securecontacts.app.localization.appLocale
 import com.securecontacts.app.localization.localized
+import com.securecontacts.app.localization.setActiveLanguage
 
 import android.net.Uri
 import android.os.Bundle
@@ -19,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
@@ -128,6 +130,8 @@ class MainActivity : FragmentActivity() {
         setContent {
             val isDarkTheme by preferencesManager.isDarkThemeEnabled.collectAsState(initial = true)
             val hasBackupPassword by preferencesManager.hasBackupPassword.collectAsState(initial = false)
+            val appLanguage by preferencesManager.appLanguage.collectAsState(initial = AppLanguage.ENGLISH)
+            setActiveLanguage(appLanguage)
 
             SecureContactsTheme(darkTheme = isDarkTheme) {
                 Surface(
@@ -150,7 +154,8 @@ class MainActivity : FragmentActivity() {
                             exportImportManager = exportImportManager,
                             unlockSession = unlockSession,
                             activity = this@MainActivity,
-                            appVersion = appVersion
+                            appVersion = appVersion,
+                            appLanguage = appLanguage
                         )
                     }
                 }
@@ -175,7 +180,8 @@ private fun MainApp(
     exportImportManager: ExportImportManager,
     unlockSession: UnlockSessionState,
     activity: MainActivity,
-    appVersion: String
+    appVersion: String,
+    appLanguage: AppLanguage
 ) {
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -293,8 +299,8 @@ private fun MainApp(
                 NavigationBar {
                     bottomNavItems.forEach { screen ->
                         NavigationBarItem(
-                            icon = { Icon(screen.icon, contentDescription = stringResource(screen.titleRes)) },
-                            label = { Text(stringResource(screen.titleRes)) },
+                            icon = { Icon(screen.icon, contentDescription = localized(screen.titleKey)) },
+                            label = { Text(localized(screen.titleKey)) },
                             selected = currentRoute == screen.route,
                             alwaysShowLabel = false,
                             onClick = {
@@ -321,8 +327,8 @@ private fun MainApp(
                 NavigationRail {
                     bottomNavItems.forEach { screen ->
                         NavigationRailItem(
-                            icon = { Icon(screen.icon, contentDescription = stringResource(screen.titleRes)) },
-                            label = { Text(stringResource(screen.titleRes)) },
+                            icon = { Icon(screen.icon, contentDescription = localized(screen.titleKey)) },
+                            label = { Text(localized(screen.titleKey)) },
                             selected = currentRoute == screen.route,
                             alwaysShowLabel = false,
                             onClick = {
@@ -554,6 +560,7 @@ private fun MainApp(
 
                 SettingsScreen(
                     appVersion = appVersion,
+                    appLanguage = appLanguage,
                     isDarkTheme = isDarkTheme,
                     isBiometricEnabled = isBiometricEnabled,
                     isBiometricAvailable = biometricManager.canAuthenticate(),
@@ -566,6 +573,11 @@ private fun MainApp(
                     onBiometricChange = { enabled ->
                         scope.launch {
                             preferencesManager.setBiometricEnabled(enabled)
+                        }
+                    },
+                    onLanguageChange = { language ->
+                        scope.launch {
+                            preferencesManager.setAppLanguage(language)
                         }
                     },
                     onExportEncrypted = { showExportPasswordDialog = true },
@@ -644,7 +656,7 @@ private fun MainApp(
                                 if (preferencesManager.verifyBackupPassword(password)) {
                                     showExportPasswordDialog = false
                                     pendingEncryptedExportPassword = password
-                                    val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+                                    val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", appLocale())
                                     val timestamp = dateFormat.format(Date())
                                     activity.beginActivityResultFlow()
                                     runCatching {
@@ -671,7 +683,7 @@ private fun MainApp(
                                 if (preferencesManager.verifyBackupPassword(password)) {
                                     showPlainExportPasswordDialog = false
                                     pendingPlainExportPassword = password
-                                    val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                                    val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", appLocale()).format(Date())
                                     activity.beginActivityResultFlow()
                                     runCatching {
                                         exportPlainLauncher.launch("secure_contacts_backup_${timestamp}.json")

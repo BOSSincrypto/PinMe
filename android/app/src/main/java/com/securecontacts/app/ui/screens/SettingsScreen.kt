@@ -1,5 +1,6 @@
 package com.securecontacts.app.ui.screens
 
+import com.securecontacts.app.localization.AppLanguage
 import com.securecontacts.app.localization.localized
 
 import androidx.compose.foundation.clickable
@@ -20,12 +21,14 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SettingsScreen(
     appVersion: String,
+    appLanguage: AppLanguage,
     isDarkTheme: Boolean,
     isBiometricEnabled: Boolean,
     isBiometricAvailable: Boolean,
     isAppLockEnabled: Boolean,
     onDarkThemeChange: (Boolean) -> Unit,
     onBiometricChange: (Boolean) -> Unit,
+    onLanguageChange: (AppLanguage) -> Unit,
     onExportEncrypted: () -> Unit,
     onExportPlain: () -> Unit,
     onImportEncrypted: () -> Unit,
@@ -102,6 +105,58 @@ fun SettingsScreen(
                             Switch(
                                 checked = isDarkTheme,
                                 onCheckedChange = onDarkThemeChange
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Language,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = localized("Язык приложения"),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = localized("Выберите язык интерфейса"),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterChip(
+                                modifier = Modifier.weight(1f),
+                                selected = appLanguage == AppLanguage.ENGLISH,
+                                onClick = { onLanguageChange(AppLanguage.ENGLISH) },
+                                label = { Text(localized("Английский")) }
+                            )
+                            FilterChip(
+                                modifier = Modifier.weight(1f),
+                                selected = appLanguage == AppLanguage.RUSSIAN,
+                                onClick = { onLanguageChange(AppLanguage.RUSSIAN) },
+                                label = { Text(localized("Русский")) }
                             )
                         }
                     }

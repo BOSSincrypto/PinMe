@@ -1,14 +1,34 @@
 package com.securecontacts.app.localization
 
+import java.util.concurrent.atomic.AtomicReference
 import java.util.Locale
 
-fun localized(value: String, vararg formatArgs: Any): String {
-    val template = when (Locale.getDefault().language) {
-        "en" -> englishText[value] ?: value
-        "ru" -> value
-        else -> value
+enum class AppLanguage(val code: String, val locale: Locale) {
+    ENGLISH("en", Locale.ENGLISH),
+    RUSSIAN("ru", Locale("ru", "RU"));
+
+    companion object {
+        fun fromCode(code: String?): AppLanguage = entries.firstOrNull { it.code == code } ?: ENGLISH
     }
-    return if (formatArgs.isEmpty()) template else String.format(Locale.getDefault(), template, *formatArgs)
+}
+
+private val activeLanguage = AtomicReference(AppLanguage.ENGLISH)
+
+fun setActiveLanguage(language: AppLanguage) {
+    activeLanguage.set(language)
+}
+
+fun currentAppLanguage(): AppLanguage = activeLanguage.get()
+
+fun appLocale(): Locale = activeLanguage.get().locale
+
+fun localized(value: String, vararg formatArgs: Any): String {
+    val language = activeLanguage.get()
+    val template = when (language) {
+        AppLanguage.ENGLISH -> englishText[value] ?: value
+        AppLanguage.RUSSIAN -> value
+    }
+    return if (formatArgs.isEmpty()) template else String.format(language.locale, template, *formatArgs)
 }
 
 private val englishText by lazy(LazyThreadSafetyMode.PUBLICATION) { mapOf(
@@ -180,6 +200,10 @@ private val englishText by lazy(LazyThreadSafetyMode.PUBLICATION) { mapOf(
     "Управление категориями" to "Manage categories",
     "История разговоров" to "Conversation history",
     "Все записи о разговорах с контактами" to "All conversation entries with contacts",
+    "Язык приложения" to "App language",
+    "Выберите язык интерфейса" to "Choose interface language",
+    "Английский" to "English",
+    "Русский" to "Russian",
     "Версия %s" to "Version %s",
     "Резервный пароль" to "Backup password",
     "Пароль помощи" to "Help password",
