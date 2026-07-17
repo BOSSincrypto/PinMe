@@ -25,6 +25,7 @@ class LocalizedTextTest {
 
         assertEquals("Contacts", localized("Контакты"))
         assertEquals("Imported: 2 contacts", localized("Импортировано: %d контактов", 2))
+        assertEquals("Version 1.0.0-alpha.1", localized("Версия %s", "1.0.0-alpha.1"))
     }
 
     @Test
@@ -33,5 +34,6 @@ class LocalizedTextTest {
 
         assertEquals("Контакты", localized("Контакты"))
         assertEquals("Импортировано: 2 контактов", localized("Импортировано: %d контактов", 2))
+        assertEquals("Версия 1.0.0-alpha.1", localized("Версия %s", "1.0.0-alpha.1"))
     }
 }

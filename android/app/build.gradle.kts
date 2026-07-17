@@ -11,7 +11,7 @@ val pinmeVersionCode = System.getenv("PINME_VERSION_CODE")
     ?: 1
 val pinmeVersionName = System.getenv("PINME_VERSION_NAME")
     ?.takeIf { it.matches(Regex("^[0-9]+\\.[0-9]+\\.[0-9]+([.-][0-9A-Za-z.-]+)?$")) }
-    ?: "1.0.0"
+    ?: "1.0.0-alpha.1"
 val releaseStorePath = System.getenv("ANDROID_KEYSTORE_PATH")
 val releaseStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
 val releaseKeyAlias = System.getenv("ANDROID_KEY_ALIAS")

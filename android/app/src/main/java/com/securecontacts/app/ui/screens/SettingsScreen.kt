@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    appVersion: String,
     isDarkTheme: Boolean,
     isBiometricEnabled: Boolean,
     isBiometricAvailable: Boolean,
@@ -580,7 +581,7 @@ fun SettingsScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = localized("Версия 1.0"),
+                            text = localized("Версия %s", appVersion),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

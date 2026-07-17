@@ -122,6 +122,8 @@ class MainActivity : FragmentActivity() {
         preferencesManager = PreferencesManager(this)
         biometricManager = BiometricAuthManager(this)
         exportImportManager = ExportImportManager(this, repository, preferencesManager::verifyBackupPassword)
+        @Suppress("DEPRECATION")
+        val appVersion = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
 
         setContent {
             val isDarkTheme by preferencesManager.isDarkThemeEnabled.collectAsState(initial = true)
@@ -147,7 +149,8 @@ class MainActivity : FragmentActivity() {
                             biometricManager = biometricManager,
                             exportImportManager = exportImportManager,
                             unlockSession = unlockSession,
-                            activity = this@MainActivity
+                            activity = this@MainActivity,
+                            appVersion = appVersion
                         )
                     }
                 }
@@ -171,7 +174,8 @@ private fun MainApp(
     biometricManager: BiometricAuthManager,
     exportImportManager: ExportImportManager,
     unlockSession: UnlockSessionState,
-    activity: MainActivity
+    activity: MainActivity,
+    appVersion: String
 ) {
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -549,6 +553,7 @@ private fun MainApp(
                 }
 
                 SettingsScreen(
+                    appVersion = appVersion,
                     isDarkTheme = isDarkTheme,
                     isBiometricEnabled = isBiometricEnabled,
                     isBiometricAvailable = biometricManager.canAuthenticate(),

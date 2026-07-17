@@ -176,7 +176,7 @@ private val englishText by lazy(LazyThreadSafetyMode.PUBLICATION) { mapOf(
     "Управление категориями" to "Manage categories",
     "История разговоров" to "Conversation history",
     "Все записи о разговорах с контактами" to "All conversation entries with contacts",
-    "Версия 1.0" to "Version 1.0",
+    "Версия %s" to "Version %s",
     "Резервный пароль" to "Backup password",
     "Пароль помощи" to "Help password",
     "Подтвердите резервный пароль" to "Confirm backup password",
