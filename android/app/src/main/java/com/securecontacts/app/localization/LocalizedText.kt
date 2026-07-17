@@ -54,6 +54,7 @@ private val englishText by lazy(LazyThreadSafetyMode.PUBLICATION) { mapOf(
     "Введите текущий резервный пароль. Импорт разрешён только после проверки пароля, а файл не зашифрован." to "Enter the current backup password. Import is allowed only after verification, and the file is not encrypted.",
     "Разблокировка контакта" to "Unlock contact",
     "Используйте отпечаток пальца" to "Use your fingerprint",
+    "Использовать пароль" to "Use password",
     "Удалить контакт" to "Delete contact",
     "Удалить этот контакт без возможности восстановления?" to "Delete this contact permanently?",
     "Удалить" to "Delete",

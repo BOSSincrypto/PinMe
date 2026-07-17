@@ -1,5 +1,7 @@
 package com.securecontacts.app.security
 
+import com.securecontacts.app.localization.localized
+
 import android.content.Context
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -49,7 +51,7 @@ class BiometricAuthManager(private val context: Context) {
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
             .setSubtitle(subtitle)
-            .setNegativeButtonText("Использовать пароль")
+            .setNegativeButtonText(localized("Использовать пароль"))
             .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
             .build()
 
