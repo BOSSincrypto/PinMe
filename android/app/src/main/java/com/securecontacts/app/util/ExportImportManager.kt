@@ -2,6 +2,12 @@ package com.securecontacts.app.util
 
 import android.content.Context
 import android.net.Uri
+import com.securecontacts.app.data.model.ContactTagWithTag
+import com.securecontacts.app.data.model.Conversation
+import com.securecontacts.app.data.model.CustomField
+import com.securecontacts.app.data.model.Event
+import com.securecontacts.app.data.model.Reminder
+import com.securecontacts.app.data.model.SocialNetwork
 import com.securecontacts.app.data.repository.ContactRepository
 import com.securecontacts.app.security.CryptoManager
 import kotlinx.coroutines.CancellationException
@@ -19,16 +25,23 @@ class ExportImportManager(
             val contacts = repository.getAllContactsSnapshot()
             val tags = repository.getAllTagsSnapshot()
             val categories = repository.getAllCategoriesSnapshot()
+            val tagIdsByContact = repository.getAllContactTagsSnapshot()
+                .groupBy(ContactTagWithTag::contactId)
+                .mapValues { (_, links) -> links.map(ContactTagWithTag::tagId) }
+            val eventsByContact = repository.getAllEventsSnapshot().groupBy(Event::contactId)
+            val remindersByContact = repository.getAllRemindersSnapshot().groupBy(Reminder::contactId)
+            val socialNetworksByContact = repository.getAllSocialNetworksSnapshot().groupBy(SocialNetwork::contactId)
+            val customFieldsByContact = repository.getAllCustomFieldsSnapshot().groupBy(CustomField::contactId)
+            val conversationsByContact = repository.getAllConversationsSnapshot().groupBy(Conversation::contactId)
             val contactExports = contacts.map { contact ->
-                val details = repository.getContactWithDetails(contact.id)
                 ContactExport(
                     contact = contact,
-                    tagIds = details?.tags?.map { it.id }.orEmpty(),
-                    events = details?.events.orEmpty(),
-                    reminders = details?.reminders.orEmpty(),
-                    socialNetworks = details?.socialNetworks.orEmpty(),
-                    customFields = details?.customFields.orEmpty(),
-                    conversations = details?.conversations.orEmpty()
+                    tagIds = tagIdsByContact[contact.id].orEmpty(),
+                    events = eventsByContact[contact.id].orEmpty(),
+                    reminders = remindersByContact[contact.id].orEmpty(),
+                    socialNetworks = socialNetworksByContact[contact.id].orEmpty(),
+                    customFields = customFieldsByContact[contact.id].orEmpty(),
+                    conversations = conversationsByContact[contact.id].orEmpty()
                 )
             }
             BackupJsonCodec.encode(
@@ -173,7 +186,7 @@ class ExportImportManager(
         isPasswordSane(password) && verifyBackupPassword(password)
 
     private fun isPasswordSane(password: String): Boolean =
-        password.isNotBlank() && password.length <= 1024
+        password.isNotBlank() && password.length <= CryptoManager.MAX_PASSWORD_LENGTH
 
     private fun writeToUri(uri: Uri, data: String): Boolean {
         context.contentResolver.openOutputStream(uri)?.use { outputStream ->

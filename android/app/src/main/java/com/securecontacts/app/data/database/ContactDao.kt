@@ -96,6 +96,14 @@ interface TagDao {
     """)
     fun getAllContactTags(): Flow<List<ContactTagWithTag>>
 
+    @Query("""
+        SELECT ct.contactId AS contactId, t.id AS tagId, t.name AS tagName, t.color AS tagColor
+        FROM contact_tags ct
+        INNER JOIN tags t ON t.id = ct.tagId
+        ORDER BY ct.contactId ASC, t.name ASC
+    """)
+    suspend fun getAllContactTagsSync(): List<ContactTagWithTag>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTag(tag: Tag): Long
 
@@ -161,6 +169,9 @@ interface EventDao {
     @Query("SELECT * FROM events ORDER BY date ASC")
     fun getAllEvents(): Flow<List<Event>>
 
+    @Query("SELECT * FROM events ORDER BY contactId ASC, date ASC")
+    suspend fun getAllEventsSync(): List<Event>
+
     @Query("SELECT * FROM events WHERE contactId = :contactId ORDER BY date ASC")
     fun getEventsForContact(contactId: Long): Flow<List<Event>>
 
@@ -191,6 +202,9 @@ interface ReminderDao {
     @Query("SELECT * FROM reminders ORDER BY CASE WHEN date IS NULL THEN 1 ELSE 0 END, date ASC")
     fun getAllReminders(): Flow<List<Reminder>>
 
+    @Query("SELECT * FROM reminders ORDER BY contactId ASC, CASE WHEN date IS NULL THEN 1 ELSE 0 END, date ASC")
+    suspend fun getAllRemindersSync(): List<Reminder>
+
     @Query("SELECT * FROM reminders WHERE contactId = :contactId ORDER BY CASE WHEN date IS NULL THEN 1 ELSE 0 END, date ASC")
     fun getRemindersForContact(contactId: Long): Flow<List<Reminder>>
 
@@ -218,6 +232,9 @@ interface SocialNetworkDao {
     @Query("SELECT * FROM social_networks WHERE contactId = :contactId")
     fun getSocialNetworksForContact(contactId: Long): Flow<List<SocialNetwork>>
 
+    @Query("SELECT * FROM social_networks ORDER BY contactId ASC, id ASC")
+    suspend fun getAllSocialNetworksSync(): List<SocialNetwork>
+
     @Query("SELECT * FROM social_networks WHERE contactId = :contactId")
     suspend fun getSocialNetworksForContactSync(contactId: Long): List<SocialNetwork>
 
@@ -238,6 +255,9 @@ interface SocialNetworkDao {
 interface CustomFieldDao {
     @Query("SELECT * FROM custom_fields WHERE contactId = :contactId")
     fun getCustomFieldsForContact(contactId: Long): Flow<List<CustomField>>
+
+    @Query("SELECT * FROM custom_fields ORDER BY contactId ASC, id ASC")
+    suspend fun getAllCustomFieldsSync(): List<CustomField>
 
     @Query("SELECT * FROM custom_fields WHERE contactId = :contactId")
     suspend fun getCustomFieldsForContactSync(contactId: Long): List<CustomField>
@@ -273,6 +293,9 @@ interface ConversationDao {
 
     @Query("SELECT * FROM conversations ORDER BY date DESC")
     fun getAllConversations(): Flow<List<Conversation>>
+
+    @Query("SELECT * FROM conversations ORDER BY contactId ASC, date DESC")
+    suspend fun getAllConversationsSync(): List<Conversation>
 
     @Query("SELECT * FROM conversations WHERE id = :id")
     suspend fun getConversationById(id: Long): Conversation?

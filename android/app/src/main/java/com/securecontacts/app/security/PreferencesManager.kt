@@ -5,9 +5,11 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import com.securecontacts.app.localization.AppLanguage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "secure_contacts_prefs")
 
@@ -65,26 +67,28 @@ class PreferencesManager(private val context: Context) {
     }
 
     suspend fun completeInitialSetup(backupPassword: String, helpPassword: String) {
-        require(backupPassword.length >= 8)
-        require(helpPassword.length >= 8)
+        require(backupPassword.length in CryptoManager.MIN_PASSWORD_LENGTH..CryptoManager.MAX_PASSWORD_LENGTH)
+        require(helpPassword.length in CryptoManager.MIN_PASSWORD_LENGTH..CryptoManager.MAX_PASSWORD_LENGTH)
         require(backupPassword != helpPassword)
-        val backupSalt = CryptoManager.generateSalt()
-        val helpSalt = CryptoManager.generateSalt()
-        val backupHash = CryptoManager.hashPassword(backupPassword, backupSalt)
-        val helpHash = CryptoManager.hashPassword(helpPassword, helpSalt)
+        val passwordData = withContext(Dispatchers.Default) {
+            val backupSalt = CryptoManager.generateSalt()
+            val helpSalt = CryptoManager.generateSalt()
+            val backupHash = CryptoManager.hashPassword(backupPassword, backupSalt)
+            val helpHash = CryptoManager.hashPassword(helpPassword, helpSalt)
+            InitialPasswordData(backupHash, backupSalt, helpHash, helpSalt)
+        }
         context.dataStore.edit { prefs ->
-            prefs[BACKUP_PASSWORD_HASH] = backupHash
-            prefs[BACKUP_PASSWORD_SALT] = backupSalt
-            prefs[HELP_PASSWORD_HASH] = helpHash
-            prefs[HELP_PASSWORD_SALT] = helpSalt
+            prefs[BACKUP_PASSWORD_HASH] = passwordData.backupHash
+            prefs[BACKUP_PASSWORD_SALT] = passwordData.backupSalt
+            prefs[HELP_PASSWORD_HASH] = passwordData.helpHash
+            prefs[HELP_PASSWORD_SALT] = passwordData.helpSalt
             prefs[FIRST_LAUNCH] = false
         }
     }
 
     suspend fun setBackupPassword(password: String) {
-        require(password.length >= 8)
-        val salt = CryptoManager.generateSalt()
-        val hash = CryptoManager.hashPassword(password, salt)
+        require(password.length in CryptoManager.MIN_PASSWORD_LENGTH..CryptoManager.MAX_PASSWORD_LENGTH)
+        val (hash, salt) = hashPassword(password)
         context.dataStore.edit { prefs ->
             prefs[BACKUP_PASSWORD_HASH] = hash
             prefs[BACKUP_PASSWORD_SALT] = salt
@@ -92,12 +96,14 @@ class PreferencesManager(private val context: Context) {
     }
 
     suspend fun verifyBackupPassword(password: String): Boolean {
-        if (password.isBlank() || password.length > 1024) return false
+        if (password.isBlank() || password.length > CryptoManager.MAX_PASSWORD_LENGTH) return false
         val prefs = context.dataStore.data.first()
         val hash = prefs[BACKUP_PASSWORD_HASH]
         val salt = prefs[BACKUP_PASSWORD_SALT]
         return if (hash != null && salt != null) {
-            CryptoManager.verifyPassword(password, salt, hash)
+            withContext(Dispatchers.Default) {
+                CryptoManager.verifyPassword(password, salt, hash)
+            }
         } else {
             false
         }
@@ -110,10 +116,9 @@ class PreferencesManager(private val context: Context) {
     }
 
     suspend fun setHelpPassword(password: String) {
-        require(password.length >= 8)
+        require(password.length in CryptoManager.MIN_PASSWORD_LENGTH..CryptoManager.MAX_PASSWORD_LENGTH)
         check(!verifyBackupPassword(password)) { "Пароль помощи должен отличаться от резервного" }
-        val salt = CryptoManager.generateSalt()
-        val hash = CryptoManager.hashPassword(password, salt)
+        val (hash, salt) = hashPassword(password)
         context.dataStore.edit { prefs ->
             prefs[HELP_PASSWORD_HASH] = hash
             prefs[HELP_PASSWORD_SALT] = salt
@@ -121,11 +126,14 @@ class PreferencesManager(private val context: Context) {
     }
 
     suspend fun verifyHelpPassword(password: String): Boolean {
+        if (password.isBlank() || password.length > CryptoManager.MAX_PASSWORD_LENGTH) return false
         val prefs = context.dataStore.data.first()
         val hash = prefs[HELP_PASSWORD_HASH]
         val salt = prefs[HELP_PASSWORD_SALT]
         return if (hash != null && salt != null) {
-            CryptoManager.verifyPassword(password, salt, hash)
+            withContext(Dispatchers.Default) {
+                CryptoManager.verifyPassword(password, salt, hash)
+            }
         } else {
             false
         }
@@ -162,8 +170,8 @@ class PreferencesManager(private val context: Context) {
     }
 
     suspend fun setAppLockPassword(password: String) {
-        val salt = CryptoManager.generateSalt()
-        val hash = CryptoManager.hashPassword(password, salt)
+        require(password.length in CryptoManager.MIN_PASSWORD_LENGTH..CryptoManager.MAX_PASSWORD_LENGTH)
+        val (hash, salt) = hashPassword(password)
         context.dataStore.edit { prefs ->
             prefs[APP_LOCK_PASSWORD_HASH] = hash
             prefs[APP_LOCK_PASSWORD_SALT] = salt
@@ -172,11 +180,14 @@ class PreferencesManager(private val context: Context) {
     }
 
     suspend fun verifyAppLockPassword(password: String): Boolean {
+        if (password.isBlank() || password.length > CryptoManager.MAX_PASSWORD_LENGTH) return false
         val prefs = context.dataStore.data.first()
         val hash = prefs[APP_LOCK_PASSWORD_HASH]
         val salt = prefs[APP_LOCK_PASSWORD_SALT]
         return if (hash != null && salt != null) {
-            CryptoManager.verifyPassword(password, salt, hash)
+            withContext(Dispatchers.Default) {
+                CryptoManager.verifyPassword(password, salt, hash)
+            }
         } else {
             false
         }
@@ -200,5 +211,17 @@ class PreferencesManager(private val context: Context) {
             prefs.remove(APP_LOCK_PASSWORD_SALT)
             prefs[APP_LOCK_ENABLED] = false
         }
+    }
+
+    private data class InitialPasswordData(
+        val backupHash: String,
+        val backupSalt: String,
+        val helpHash: String,
+        val helpSalt: String
+    )
+
+    private suspend fun hashPassword(password: String): Pair<String, String> = withContext(Dispatchers.Default) {
+        val salt = CryptoManager.generateSalt()
+        CryptoManager.hashPassword(password, salt) to salt
     }
 }

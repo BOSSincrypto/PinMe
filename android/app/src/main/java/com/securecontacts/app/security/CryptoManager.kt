@@ -22,6 +22,8 @@ object CryptoManager {
     private const val GCM_TAG_LENGTH = 128
     private const val GCM_IV_LENGTH = 12
     private const val SALT_LENGTH = 32
+    const val MIN_PASSWORD_LENGTH = 8
+    const val MAX_PASSWORD_LENGTH = 1024
     const val PASSWORD_HASH_ITERATIONS = 100000
     private const val BACKUP_KDF_ITERATIONS = 310000
     private const val KEY_LENGTH = 256
@@ -134,7 +136,7 @@ object CryptoManager {
 
     fun encryptWithPassword(data: String, password: String): String {
         require(password.isNotBlank()) { "Пароль резервной копии не может быть пустым" }
-        require(password.length <= 1024) { "Пароль резервной копии слишком длинный" }
+        require(password.length <= MAX_PASSWORD_LENGTH) { "Пароль резервной копии слишком длинный" }
         val salt = generateSalt()
         val saltBytes = Base64.getDecoder().decode(salt)
         val key = deriveKeyFromPassword(password, salt, BACKUP_KDF_ITERATIONS)
@@ -163,7 +165,7 @@ object CryptoManager {
     }
 
     fun decryptWithPassword(encryptedData: String, password: String): String? {
-        if (password.isBlank() || password.length > 1024 || encryptedData.length > MAX_BACKUP_INPUT_BYTES) {
+        if (password.isBlank() || password.length > MAX_PASSWORD_LENGTH || encryptedData.length > MAX_BACKUP_INPUT_BYTES) {
             return null
         }
         return try {

@@ -819,7 +819,7 @@ private fun MainApp(
                         },
                         onPasswordSubmit = { password ->
                             contactWithDetails?.contact?.let { contact ->
-                                if (repository.verifyContactPassword(contact, password)) {
+                                if (repository.verifyContactPasswordAsync(contact, password)) {
                                     unlockSession.unlockContact(contactId)
                                     showUnlockDialog = false
                                     passwordError = false

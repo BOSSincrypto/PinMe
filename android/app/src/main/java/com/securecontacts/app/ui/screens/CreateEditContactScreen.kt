@@ -123,6 +123,8 @@ fun CreateEditContactScreen(
     var customFields by remember { mutableStateOf<List<CustomFieldInput>>(emptyList()) }
 
     var isInitialized by remember { mutableStateOf(false) }
+    val passwordTooShort = password.isNotEmpty() && password.length < 8
+    val passwordMismatch = confirmPassword.isNotEmpty() && password != confirmPassword
 
     LaunchedEffect(existingContact) {
         if (existingContact != null && !isInitialized) {
@@ -184,11 +186,9 @@ fun CreateEditContactScreen(
                 },
                 actions = {
                     val passwordValid = if (isEditMode) {
-                        // In edit mode: password is optional, but if entered must match
-                        password.isEmpty() || (password.isNotBlank() && password == confirmPassword)
+                        password.isEmpty() || (!passwordTooShort && password == confirmPassword)
                     } else {
-                        // In create mode: password is required and must match
-                        password.isNotBlank() && password == confirmPassword
+                        !passwordTooShort && password.isNotBlank() && password == confirmPassword
                     }
                     TextButton(
                         onClick = {
@@ -409,6 +409,10 @@ fun CreateEditContactScreen(
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            isError = passwordTooShort,
+                            supportingText = if (passwordTooShort) {
+                                { Text(localized("Пароль должен содержать минимум 8 символов")) }
+                            } else null,
                             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                             trailingIcon = {
                                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -428,8 +432,8 @@ fun CreateEditContactScreen(
                             singleLine = true,
                             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                            isError = confirmPassword.isNotEmpty() && password != confirmPassword,
-                            supportingText = if (confirmPassword.isNotEmpty() && password != confirmPassword) {
+                            isError = passwordMismatch,
+                            supportingText = if (passwordMismatch) {
                                 { Text(localized("Пароли не совпадают")) }
                             } else null
                         )

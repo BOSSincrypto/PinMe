@@ -4,9 +4,11 @@ import androidx.room.withTransaction
 import com.securecontacts.app.data.database.*
 import com.securecontacts.app.data.model.*
 import com.securecontacts.app.security.CryptoManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.Instant
 import java.time.ZoneOffset
@@ -83,8 +85,11 @@ class ContactRepository(
         categoryId: Long?,
         encryptedNotes: String = ""
     ): Long {
+        require(password.length in CryptoManager.MIN_PASSWORD_LENGTH..CryptoManager.MAX_PASSWORD_LENGTH)
         val salt = CryptoManager.generateSalt()
-        val passwordHash = CryptoManager.hashPassword(password, salt)
+        val passwordHash = withContext(Dispatchers.Default) {
+            CryptoManager.hashPassword(password, salt)
+        }
 
         val contact = Contact(
             name = name,
@@ -133,6 +138,9 @@ class ContactRepository(
         if (contact.passwordHash.isBlank() && contact.passwordSalt.isBlank()) {
             return true
         }
+        if (password.isBlank() || password.length > CryptoManager.MAX_PASSWORD_LENGTH) {
+            return false
+        }
         return CryptoManager.verifyPassword(
             password,
             contact.passwordSalt,
@@ -141,12 +149,20 @@ class ContactRepository(
         )
     }
 
+    suspend fun verifyContactPasswordAsync(contact: Contact, password: String): Boolean =
+        withContext(Dispatchers.Default) {
+            verifyContactPassword(contact, password)
+        }
+
     suspend fun changeContactPassword(contactId: Long, oldPassword: String, newPassword: String): Boolean {
+        require(newPassword.length in CryptoManager.MIN_PASSWORD_LENGTH..CryptoManager.MAX_PASSWORD_LENGTH)
         return database.withTransaction {
             val contact = contactDao.getContactById(contactId) ?: return@withTransaction false
             if (!verifyContactPassword(contact, oldPassword)) return@withTransaction false
             val newSalt = CryptoManager.generateSalt()
-            val newHash = CryptoManager.hashPassword(newPassword, newSalt)
+            val newHash = withContext(Dispatchers.Default) {
+                CryptoManager.hashPassword(newPassword, newSalt)
+            }
             contactDao.updateContact(contact.copy(
                 passwordHash = newHash,
                 passwordSalt = newSalt,
@@ -158,10 +174,13 @@ class ContactRepository(
     }
 
     suspend fun updateContactPassword(contactId: Long, newPassword: String): Boolean {
+        require(newPassword.length in CryptoManager.MIN_PASSWORD_LENGTH..CryptoManager.MAX_PASSWORD_LENGTH)
         return database.withTransaction {
             val contact = contactDao.getContactById(contactId) ?: return@withTransaction false
             val newSalt = CryptoManager.generateSalt()
-            val newHash = CryptoManager.hashPassword(newPassword, newSalt)
+            val newHash = withContext(Dispatchers.Default) {
+                CryptoManager.hashPassword(newPassword, newSalt)
+            }
             contactDao.updateContact(contact.copy(
                 passwordHash = newHash,
                 passwordSalt = newSalt,
@@ -187,6 +206,18 @@ class ContactRepository(
             }
         )
     }
+
+    suspend fun getAllContactTagsSnapshot(): List<ContactTagWithTag> = tagDao.getAllContactTagsSync()
+
+    suspend fun getAllEventsSnapshot(): List<Event> = eventDao.getAllEventsSync()
+
+    suspend fun getAllRemindersSnapshot(): List<Reminder> = reminderDao.getAllRemindersSync()
+
+    suspend fun getAllSocialNetworksSnapshot(): List<SocialNetwork> = socialNetworkDao.getAllSocialNetworksSync()
+
+    suspend fun getAllCustomFieldsSnapshot(): List<CustomField> = customFieldDao.getAllCustomFieldsSync()
+
+    suspend fun getAllConversationsSnapshot(): List<Conversation> = conversationDao.getAllConversationsSync()
 
     suspend fun createTag(name: String, color: String): Long =
         tagDao.insertTag(Tag(name = name, color = color))
@@ -381,18 +412,16 @@ class ContactRepository(
 
     // Date Items (Birthdays + Events)
     fun getDateItems(): Flow<List<DateItem>> {
-        val today = LocalDate.now()
-
         return combine(
-            contactDao.getContactsWithBirthdays(),
             eventDao.getAllEvents(),
             contactDao.getAllContacts()
-        ) { contactsWithBirthdays, events, allContacts ->
+        ) { events, allContacts ->
+            val today = LocalDate.now()
             val dateItems = mutableListOf<DateItem>()
             val contactsById = allContacts.associateBy(Contact::id)
 
             // Add birthdays
-            contactsWithBirthdays.forEach { contact ->
+            allContacts.asSequence().filter { it.birthday != null }.forEach { contact ->
                 contact.birthday?.let { birthdayMillis ->
                     val birthdayDate = Instant.ofEpochMilli(birthdayMillis)
                         .atZone(ZoneOffset.UTC)

@@ -682,7 +682,11 @@ fun SetupAppLockDialog(
                     onValueChange = { password = it },
                     label = { Text(localized("Пароль")) },
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation()
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = password.isNotEmpty() && password.length < 8,
+                    supportingText = if (password.isNotEmpty() && password.length < 8) {
+                        { Text(localized("Пароль должен содержать минимум 8 символов")) }
+                    } else null
                 )
                 OutlinedTextField(
                     value = confirmPassword,
@@ -700,7 +704,7 @@ fun SetupAppLockDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(password) },
-                enabled = password.isNotBlank() && password == confirmPassword
+                enabled = password.length >= 8 && password == confirmPassword
             ) {
                 Text(localized("Установить"))
             }

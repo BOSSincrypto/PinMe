@@ -15,6 +15,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
 @Composable
 fun SetupBackupPasswordScreen(
@@ -240,13 +241,15 @@ fun SetupBackupPasswordScreen(
 fun UnlockContactDialog(
     contactName: String,
     onDismiss: () -> Unit,
-    onPasswordSubmit: (String) -> Unit,
+    onPasswordSubmit: suspend (String) -> Unit,
     onBiometricClick: (() -> Unit)?,
     isError: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var isSubmitting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -298,10 +301,28 @@ fun UnlockContactDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onPasswordSubmit(password) },
-                enabled = password.isNotBlank()
+                onClick = {
+                    if (!isSubmitting) {
+                        isSubmitting = true
+                        scope.launch {
+                            try {
+                                onPasswordSubmit(password)
+                            } finally {
+                                isSubmitting = false
+                            }
+                        }
+                    }
+                },
+                enabled = password.isNotBlank() && !isSubmitting
             ) {
-                Text(localized("Разблокировать"))
+                if (isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(localized("Разблокировать"))
+                }
             }
         },
         dismissButton = {
