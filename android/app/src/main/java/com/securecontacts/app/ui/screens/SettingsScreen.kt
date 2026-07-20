@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -780,12 +781,14 @@ fun PasswordInputDialog(
     title: String,
     message: String,
     onDismiss: () -> Unit,
-    onConfirm: (password: String) -> Unit
+    onConfirm: suspend (password: String) -> Unit
 ) {
     var password by remember { mutableStateOf("") }
+    var isSubmitting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isSubmitting) onDismiss() },
         title = { Text(title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -795,20 +798,33 @@ fun PasswordInputDialog(
                     onValueChange = { password = it },
                     label = { Text(localized("Пароль")) },
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation()
+                    visualTransformation = PasswordVisualTransformation(),
+                    enabled = !isSubmitting
                 )
+                if (isSubmitting) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(password) },
-                enabled = password.isNotBlank()
+                onClick = {
+                    isSubmitting = true
+                    scope.launch {
+                        try {
+                            onConfirm(password)
+                        } finally {
+                            isSubmitting = false
+                        }
+                    }
+                },
+                enabled = password.isNotBlank() && !isSubmitting
             ) {
                 Text(localized("Подтвердить"))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, enabled = !isSubmitting) {
                 Text(localized("Отмена"))
             }
         }

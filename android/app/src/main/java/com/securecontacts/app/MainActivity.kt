@@ -38,8 +38,10 @@ import com.securecontacts.app.ui.screens.*
 import com.securecontacts.app.ui.theme.SecureContactsTheme
 import com.securecontacts.app.util.ExportImportManager
 import com.securecontacts.app.util.ImportResult
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -88,11 +90,8 @@ private fun Contact.maskPrivateFields(): Contact = copy(
 )
 
 class MainActivity : FragmentActivity() {
-    private lateinit var database: AppDatabase
-    private lateinit var repository: ContactRepository
     private lateinit var preferencesManager: PreferencesManager
     private lateinit var biometricManager: BiometricAuthManager
-    private lateinit var exportImportManager: ExportImportManager
     private val unlockSession = UnlockSessionState()
     private var isActivityResultInProgress = false
 
@@ -109,21 +108,8 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
 
-        database = (application as SecureContactsApp).database
-        repository = ContactRepository(
-            database.contactDao(),
-            database.tagDao(),
-            database.categoryDao(),
-            database.eventDao(),
-            database.reminderDao(),
-            database.socialNetworkDao(),
-            database.customFieldDao(),
-            database.conversationDao(),
-            database.searchHistoryDao()
-        )
         preferencesManager = PreferencesManager(this)
         biometricManager = BiometricAuthManager(this)
-        exportImportManager = ExportImportManager(this, repository, preferencesManager::verifyBackupPassword)
         @Suppress("DEPRECATION")
         val appVersion = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
 
@@ -131,6 +117,14 @@ class MainActivity : FragmentActivity() {
             val isDarkTheme by preferencesManager.isDarkThemeEnabled.collectAsState(initial = true)
             val hasBackupPassword by preferencesManager.hasBackupPassword.collectAsState(initial = false)
             val appLanguage by preferencesManager.appLanguage.collectAsState(initial = AppLanguage.ENGLISH)
+            var databaseReady by remember { mutableStateOf<AppDatabase?>(null) }
+
+            LaunchedEffect(Unit) {
+                databaseReady = withContext(Dispatchers.IO) {
+                    (application as SecureContactsApp).database
+                }
+            }
+
             setActiveLanguage(appLanguage)
 
             SecureContactsTheme(darkTheme = isDarkTheme) {
@@ -138,25 +132,53 @@ class MainActivity : FragmentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    if (!hasBackupPassword) {
-                        SetupBackupPasswordScreen(
-                            onSetupComplete = { backupPassword, helpPassword ->
-                                lifecycleScope.launch {
-                                    preferencesManager.completeInitialSetup(backupPassword, helpPassword)
-                                }
-                            }
-                        )
+                    val currentDatabase = databaseReady
+                    if (currentDatabase == null) {
+                        CircularProgressIndicator()
                     } else {
-                        MainApp(
-                            repository = repository,
-                            preferencesManager = preferencesManager,
-                            biometricManager = biometricManager,
-                            exportImportManager = exportImportManager,
-                            unlockSession = unlockSession,
-                            activity = this@MainActivity,
-                            appVersion = appVersion,
-                            appLanguage = appLanguage
-                        )
+                        val currentRepository = remember(currentDatabase) {
+                            val createdRepository = ContactRepository(
+                                currentDatabase.contactDao(),
+                                currentDatabase.tagDao(),
+                                currentDatabase.categoryDao(),
+                                currentDatabase.eventDao(),
+                                currentDatabase.reminderDao(),
+                                currentDatabase.socialNetworkDao(),
+                                currentDatabase.customFieldDao(),
+                                currentDatabase.conversationDao(),
+                                currentDatabase.searchHistoryDao()
+                            )
+                            createdRepository
+                        }
+                        val currentExportImportManager = remember(currentRepository) {
+                            val createdManager = ExportImportManager(
+                                this@MainActivity,
+                                currentRepository,
+                                preferencesManager::verifyBackupPassword
+                            )
+                            createdManager
+                        }
+
+                        if (!hasBackupPassword) {
+                            SetupBackupPasswordScreen(
+                                onSetupComplete = { backupPassword, helpPassword ->
+                                    lifecycleScope.launch {
+                                        preferencesManager.completeInitialSetup(backupPassword, helpPassword)
+                                    }
+                                }
+                            )
+                        } else {
+                            MainApp(
+                                repository = currentRepository,
+                                preferencesManager = preferencesManager,
+                                biometricManager = biometricManager,
+                                exportImportManager = currentExportImportManager,
+                                unlockSession = unlockSession,
+                                activity = this@MainActivity,
+                                appVersion = appVersion,
+                                appLanguage = appLanguage
+                            )
+                        }
                     }
                 }
             }
@@ -210,6 +232,14 @@ private fun MainApp(
 
     val isAppLockEnabled = appLockEnabledState == true
     val hasAppLockPassword = appLockPasswordState == true
+    val visibleContactIds = unlockSession.unlockedContactIds + allContacts
+        .asSequence()
+        .filter(Contact::isLegacyUnprotected)
+        .map(Contact::id)
+        .toSet()
+    val visibleContactTags = contactTags.mapValues { (contactId, tagsForContact) ->
+        if (contactId in visibleContactIds) tagsForContact else emptyList()
+    }
 
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedTagId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -220,15 +250,15 @@ private fun MainApp(
         allContacts,
         searchQuery,
         selectedTagId,
-        contactTags,
-        unlockSession.unlockedContactIds
+        visibleContactTags,
+        visibleContactIds
     ) {
         var result = allContacts
 
         if (searchQuery.isNotBlank()) {
             result = result.filter { contact ->
                 contact.name.contains(searchQuery, ignoreCase = true) ||
-                (contact.id in unlockSession.unlockedContactIds && (
+                (contact.id in visibleContactIds && (
                     contact.phone.contains(searchQuery, ignoreCase = true) ||
                         contact.workplace.contains(searchQuery, ignoreCase = true) ||
                         contact.position.contains(searchQuery, ignoreCase = true) ||
@@ -239,26 +269,26 @@ private fun MainApp(
 
         if (selectedTagId != null) {
             result = result.filter { contact ->
-                contactTags[contact.id]?.any { it.id == selectedTagId } == true
+                visibleContactTags[contact.id]?.any { it.id == selectedTagId } == true
             }
         }
 
         result
     }
     val displayContacts = filteredContacts.map { contact ->
-        if (contact.id in unlockSession.unlockedContactIds || contact.isLegacyUnprotected()) contact
+        if (contact.id in visibleContactIds) contact
         else contact.maskPrivateFields()
     }
 
     val contactsById = allContacts.associateBy { it.id }
-    val remindersWithContacts = reminders.filter { it.contactId in unlockSession.unlockedContactIds }.map { reminder ->
+    val remindersWithContacts = reminders.filter { it.contactId in visibleContactIds }.map { reminder ->
         ReminderWithContact(
             reminder = reminder,
             contact = contactsById[reminder.contactId]
         )
     }
-    val visibleDateItems = dateItems.filter { it.contactId in unlockSession.unlockedContactIds }
-    val visibleConversations = allConversations.filter { it.contactId in unlockSession.unlockedContactIds }
+    val visibleDateItems = dateItems.filter { it.contactId in visibleContactIds }
+    val visibleConversations = allConversations.filter { it.contactId in visibleContactIds }
 
     val scope = rememberCoroutineScope()
 
@@ -363,7 +393,7 @@ private fun MainApp(
                     contacts = displayContacts,
                     allContacts = allContacts,
                     tags = tags,
-                    contactTags = contactTags,
+                    contactTags = visibleContactTags,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { searchQuery = it },
                     onContactClick = { contactId ->
@@ -403,7 +433,7 @@ private fun MainApp(
                     },
                     onCompleteReminder = { reminderId ->
                         reminders.firstOrNull {
-                            it.id == reminderId && it.contactId in unlockSession.unlockedContactIds
+                            it.id == reminderId && it.contactId in visibleContactIds
                         }?.let {
                             scope.launch {
                                 repository.completeReminder(reminderId)
@@ -412,7 +442,7 @@ private fun MainApp(
                     },
                     onDeleteReminder = { reminderId ->
                         reminders.firstOrNull {
-                            it.id == reminderId && it.contactId in unlockSession.unlockedContactIds
+                            it.id == reminderId && it.contactId in visibleContactIds
                         }?.let { reminder ->
                             scope.launch {
                                 repository.deleteReminder(reminder)
@@ -652,22 +682,20 @@ private fun MainApp(
                         message = localized("Введите резервный пароль для создания зашифрованной копии"),
                         onDismiss = { showExportPasswordDialog = false },
                         onConfirm = { password ->
-                            scope.launch {
-                                if (preferencesManager.verifyBackupPassword(password)) {
-                                    showExportPasswordDialog = false
-                                    pendingEncryptedExportPassword = password
-                                    val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", appLocale())
-                                    val timestamp = dateFormat.format(Date())
-                                    activity.beginActivityResultFlow()
-                                    runCatching {
-                                        exportEncryptedLauncher.launch("secure_contacts_backup_${timestamp}.enc")
-                                    }.onFailure {
-                                        activity.endActivityResultFlow()
-                                        pendingEncryptedExportPassword = null
-                                    }
-                                } else {
-                                    Toast.makeText(context, localized("Неверный резервный пароль"), Toast.LENGTH_SHORT).show()
+                            if (preferencesManager.verifyBackupPassword(password)) {
+                                showExportPasswordDialog = false
+                                pendingEncryptedExportPassword = password
+                                val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", appLocale())
+                                val timestamp = dateFormat.format(Date())
+                                activity.beginActivityResultFlow()
+                                runCatching {
+                                    exportEncryptedLauncher.launch("secure_contacts_backup_${timestamp}.enc")
+                                }.onFailure {
+                                    activity.endActivityResultFlow()
+                                    pendingEncryptedExportPassword = null
                                 }
+                            } else {
+                                Toast.makeText(context, localized("Неверный резервный пароль"), Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
@@ -679,21 +707,19 @@ private fun MainApp(
                         message = localized("Введите резервный пароль. Файл будет сохранён без шифрования и будет содержать персональные данные, хэши паролей контактов и дополнительные поля."),
                         onDismiss = { showPlainExportPasswordDialog = false },
                         onConfirm = { password ->
-                            scope.launch {
-                                if (preferencesManager.verifyBackupPassword(password)) {
-                                    showPlainExportPasswordDialog = false
-                                    pendingPlainExportPassword = password
-                                    val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", appLocale()).format(Date())
-                                    activity.beginActivityResultFlow()
-                                    runCatching {
-                                        exportPlainLauncher.launch("secure_contacts_backup_${timestamp}.json")
-                                    }.onFailure {
-                                        activity.endActivityResultFlow()
-                                        pendingPlainExportPassword = null
-                                    }
-                                } else {
-                                    Toast.makeText(context, localized("Неверный резервный пароль"), Toast.LENGTH_SHORT).show()
+                            if (preferencesManager.verifyBackupPassword(password)) {
+                                showPlainExportPasswordDialog = false
+                                pendingPlainExportPassword = password
+                                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", appLocale()).format(Date())
+                                activity.beginActivityResultFlow()
+                                runCatching {
+                                    exportPlainLauncher.launch("secure_contacts_backup_${timestamp}.json")
+                                }.onFailure {
+                                    activity.endActivityResultFlow()
+                                    pendingPlainExportPassword = null
                                 }
+                            } else {
+                                Toast.makeText(context, localized("Неверный резервный пароль"), Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
@@ -709,23 +735,21 @@ private fun MainApp(
                         },
                         onConfirm = { password ->
                             pendingEncryptedImportUri?.let { uri ->
-                                scope.launch {
-                                    try {
-                                        val result = exportImportManager.importEncryptedFromUri(uri, password)
-                                        when (result) {
-                                            is ImportResult.Success -> {
-                                                Toast.makeText(context, localized("Импортировано: %d контактов", result.contactsImported), Toast.LENGTH_SHORT).show()
-                                            }
-                                            is ImportResult.Error -> {
-                                                Toast.makeText(context, localized("Ошибка: %s", result.message), Toast.LENGTH_SHORT).show()
-                                            }
+                                try {
+                                    val result = exportImportManager.importEncryptedFromUri(uri, password)
+                                    when (result) {
+                                        is ImportResult.Success -> {
+                                            Toast.makeText(context, localized("Импортировано: %d контактов", result.contactsImported), Toast.LENGTH_SHORT).show()
                                         }
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, localized("Ошибка: %s", e.message.orEmpty()), Toast.LENGTH_SHORT).show()
+                                        is ImportResult.Error -> {
+                                            Toast.makeText(context, localized("Ошибка: %s", result.message), Toast.LENGTH_SHORT).show()
+                                        }
                                     }
-                                    showEncryptedImportPasswordDialog = false
-                                    pendingEncryptedImportUri = null
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, localized("Ошибка: %s", e.message.orEmpty()), Toast.LENGTH_SHORT).show()
                                 }
+                                showEncryptedImportPasswordDialog = false
+                                pendingEncryptedImportUri = null
                             }
                         }
                     )
@@ -741,19 +765,17 @@ private fun MainApp(
                         },
                         onConfirm = { password ->
                             pendingPlainImportUri?.let { uri ->
-                                scope.launch {
-                                    try {
-                                        val result = exportImportManager.importPlainFromUri(uri, password)
-                                        when (result) {
-                                            is ImportResult.Success -> Toast.makeText(context, localized("Импортировано: %d контактов", result.contactsImported), Toast.LENGTH_SHORT).show()
-                                            is ImportResult.Error -> Toast.makeText(context, localized("Ошибка: %s", result.message), Toast.LENGTH_SHORT).show()
-                                        }
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, localized("Ошибка: %s", e.message.orEmpty()), Toast.LENGTH_SHORT).show()
+                                try {
+                                    val result = exportImportManager.importPlainFromUri(uri, password)
+                                    when (result) {
+                                        is ImportResult.Success -> Toast.makeText(context, localized("Импортировано: %d контактов", result.contactsImported), Toast.LENGTH_SHORT).show()
+                                        is ImportResult.Error -> Toast.makeText(context, localized("Ошибка: %s", result.message), Toast.LENGTH_SHORT).show()
                                     }
-                                    showPlainImportPasswordDialog = false
-                                    pendingPlainImportUri = null
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, localized("Ошибка: %s", e.message.orEmpty()), Toast.LENGTH_SHORT).show()
                                 }
+                                showPlainImportPasswordDialog = false
+                                pendingPlainImportUri = null
                             }
                         }
                     )
@@ -778,7 +800,11 @@ private fun MainApp(
                 val contactIsUnlocked = contactId in unlockSession.unlockedContactIds ||
                     contactWithDetails?.contact?.isLegacyUnprotected() == true
                 val displayContactWithDetails = contactWithDetails?.let { details ->
-                    if (contactIsUnlocked) details else details.copy(contact = details.contact.maskPrivateFields())
+                    if (contactIsUnlocked) details else details.copy(
+                        contact = details.contact.maskPrivateFields(),
+                        tags = emptyList(),
+                        category = null
+                    )
                 }
 
                 ContactDetailScreen(
@@ -1061,17 +1087,17 @@ private fun MainApp(
                 val visibleSearchResults = remember(
                     searchResults,
                     localSearchQuery,
-                    unlockSession.unlockedContactIds
+                    visibleContactIds
                 ) {
                     searchResults.filter { contact ->
                         contact.name.contains(localSearchQuery, ignoreCase = true) ||
-                            (contact.id in unlockSession.unlockedContactIds && (
+                            (contact.id in visibleContactIds && (
                                 contact.phone.contains(localSearchQuery, ignoreCase = true) ||
                                     contact.workplace.contains(localSearchQuery, ignoreCase = true) ||
                                     contact.position.contains(localSearchQuery, ignoreCase = true)
                                 ))
                     }.map { contact ->
-                        if (contact.id in unlockSession.unlockedContactIds || contact.isLegacyUnprotected()) contact
+                        if (contact.id in visibleContactIds) contact
                         else contact.maskPrivateFields()
                     }
                 }
@@ -1081,8 +1107,8 @@ private fun MainApp(
                     onSearchQueryChange = { localSearchQuery = it },
                     searchResults = visibleSearchResults,
                     recentSearches = recentSearches,
-                    contactTags = contactTags,
-                    unlockedContactIds = unlockSession.unlockedContactIds,
+                    contactTags = visibleContactTags,
+                    unlockedContactIds = visibleContactIds,
                     onContactClick = { contactId ->
                         navController.navigate(Screen.ContactDetail.createRoute(contactId))
                     },

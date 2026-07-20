@@ -151,7 +151,17 @@ const Reminders = () => {
     );
     updatedReminder.notificationId = notificationId;
 
-    storage.updateReminder(editingReminder.id, updatedReminder);
+    if (!storage.updateReminder(editingReminder.id, updatedReminder)) {
+      if (notificationId !== null) {
+        await notificationService.cancelNotification(notificationId);
+      }
+      toast({
+        title: "Ошибка сохранения",
+        description: "Не удалось сохранить напоминание",
+        variant: "destructive",
+      });
+      return;
+    }
     loadData();
     setEditingReminder(null);
     toast({

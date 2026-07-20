@@ -17,6 +17,32 @@ interface DateEvent {
   type: "birthday" | "event";
 }
 
+const parseDateOnly = (value: string): { year: number; month: number; day: number } | null => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(0);
+  date.setHours(0, 0, 0, 0);
+  date.setFullYear(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+    ? { year, month, day }
+    : null;
+};
+
+const isLeapYear = (year: number): boolean => year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+
+const dateForYear = (value: string, year: number): Date | null => {
+  const parsed = parseDateOnly(value);
+  if (!parsed) return null;
+  const day = parsed.month === 2 && parsed.day === 29 && !isLeapYear(year) ? 28 : parsed.day;
+  const date = new Date(0);
+  date.setHours(0, 0, 0, 0);
+  date.setFullYear(year, parsed.month - 1, day);
+  return date;
+};
+
 const Dates = () => {
   const [events, setEvents] = useState<DateEvent[]>([]);
 
@@ -73,36 +99,33 @@ const Dates = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const targetDate = new Date(dateString);
     const currentYear = today.getFullYear();
+    const targetDate = dateForYear(dateString, currentYear);
+    if (!targetDate) return 0;
 
-    // Set the target date to current year
-    targetDate.setFullYear(currentYear);
-
-    // If the date has passed this year, use next year
     if (targetDate < today) {
-      targetDate.setFullYear(currentYear + 1);
+      const nextYearDate = dateForYear(dateString, currentYear + 1);
+      if (!nextYearDate) return 0;
+      return Math.round((nextYearDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     }
 
-    const diffTime = targetDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    return diffDays;
+    return Math.round((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   const calculateAge = (dateString: string): number => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [birthYear, birthMonth, birthDay] = dateString.split("-").map(Number);
-    const birthdayThisYear = new Date(today.getFullYear(), birthMonth - 1, birthDay);
-    const birthdayYear = birthdayThisYear < today
-      ? today.getFullYear() + 1
-      : today.getFullYear();
-    return birthdayYear - birthYear;
+    const parsed = parseDateOnly(dateString);
+    if (!parsed) return 0;
+    const birthdayThisYear = dateForYear(dateString, today.getFullYear());
+    if (!birthdayThisYear) return 0;
+    return today.getFullYear() - parsed.year - (birthdayThisYear > today ? 1 : 0);
   };
 
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
+    const parsed = parseDateOnly(dateString);
+    const date = parsed ? dateForYear(dateString, parsed.year) : null;
+    if (!date) return dateString;
     return date.toLocaleDateString("ru-RU", {
       day: "numeric",
       month: "long",

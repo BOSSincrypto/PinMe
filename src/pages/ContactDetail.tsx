@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { storage } from "@/lib/storage";
+import { isSafeExternalUrl, storage } from "@/lib/storage";
 import { notificationService } from "@/lib/notifications";
 import { Contact, ContactFormData } from "@/types/contact";
 import { Reminder, PRIORITY_LABELS, PRIORITY_COLORS } from "@/types/reminder";
@@ -101,13 +101,24 @@ const ContactDetail = () => {
   const handleUpdate = async (data: ContactFormData) => {
     if (contact && id) {
       const { password, ...contactData } = data;
+      const hasStoredDigest = Boolean(contact.passwordHash && contact.passwordSalt);
+      if (!password && !hasStoredDigest && !contact.password) {
+        toast({
+          title: "Ошибка сохранения",
+          description: "У контакта отсутствует пароль доступа",
+          variant: "destructive",
+        });
+        return;
+      }
       const credentials = password
         ? await createPasswordDigest(password)
-        : {
-            hash: contact.passwordHash,
-            salt: contact.passwordSalt,
-            iterations: contact.passwordIterations,
-          };
+        : contact.passwordHash && contact.passwordSalt
+          ? {
+              hash: contact.passwordHash,
+              salt: contact.passwordSalt,
+              iterations: contact.passwordIterations,
+            }
+          : await createPasswordDigest(contact.password || "");
       const updatedContact: Contact = {
         ...contact,
         ...contactData,
@@ -222,7 +233,17 @@ const ContactDetail = () => {
     );
     updatedReminder.notificationId = notificationId;
 
-    storage.updateReminder(editingReminder.id, updatedReminder);
+    if (!storage.updateReminder(editingReminder.id, updatedReminder)) {
+      if (notificationId !== null) {
+        await notificationService.cancelNotification(notificationId);
+      }
+      toast({
+        title: "Ошибка сохранения",
+        description: "Не удалось сохранить напоминание",
+        variant: "destructive",
+      });
+      return;
+    }
     loadReminders(id);
     setEditingReminder(null);
     toast({
@@ -525,14 +546,18 @@ const ContactDetail = () => {
                     {contact.socialMedia.map((social, index) => (
                       <div key={index}>
                         <span className="text-sm font-medium">{social.platform}: </span>
-                        <a
-                          href={social.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline"
-                        >
-                          {social.url}
-                        </a>
+                        {isSafeExternalUrl(social.url) ? (
+                          <a
+                            href={social.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline"
+                          >
+                            {social.url}
+                          </a>
+                        ) : (
+                          <span className="text-sm">{social.url}</span>
+                        )}
                       </div>
                     ))}
                   </div>

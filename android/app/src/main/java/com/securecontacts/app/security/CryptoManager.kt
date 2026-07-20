@@ -25,6 +25,8 @@ object CryptoManager {
     const val MIN_PASSWORD_LENGTH = 8
     const val MAX_PASSWORD_LENGTH = 1024
     const val PASSWORD_HASH_ITERATIONS = 100000
+    private const val MIN_PASSWORD_HASH_ITERATIONS = 100000
+    private const val MAX_PASSWORD_HASH_ITERATIONS = 2000000
     private const val BACKUP_KDF_ITERATIONS = 310000
     private const val KEY_LENGTH = 256
     private const val BACKUP_SALT_LENGTH = SALT_LENGTH
@@ -93,6 +95,8 @@ object CryptoManager {
     }
 
     fun hashPassword(password: String, salt: String, iterations: Int = PASSWORD_HASH_ITERATIONS): String {
+        require(password.length <= MAX_PASSWORD_LENGTH)
+        require(iterations in MIN_PASSWORD_HASH_ITERATIONS..MAX_PASSWORD_HASH_ITERATIONS)
         val hash = derivePasswordHash(password, salt, iterations)
         return try {
             Base64.getEncoder().encodeToString(hash)
@@ -107,6 +111,11 @@ object CryptoManager {
         hash: String,
         iterations: Int = PASSWORD_HASH_ITERATIONS
     ): Boolean {
+        if (password.isBlank() || password.length > MAX_PASSWORD_LENGTH ||
+            iterations !in MIN_PASSWORD_HASH_ITERATIONS..MAX_PASSWORD_HASH_ITERATIONS
+        ) {
+            return false
+        }
         return try {
             val expectedHash = Base64.getDecoder().decode(hash)
             val computedHash = derivePasswordHash(password, salt, iterations)

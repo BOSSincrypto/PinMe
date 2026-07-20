@@ -24,6 +24,7 @@ fun AppLockScreen(
 ) {
     var password by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
+    var isVerifying by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -75,6 +76,7 @@ fun AppLockScreen(
                 label = { Text(localized("Пароль")) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
+                enabled = !isVerifying,
                 isError = isError,
                 supportingText = if (isError) {
                     { Text(localized("Неверный пароль")) }
@@ -87,20 +89,30 @@ fun AppLockScreen(
 
             Button(
                 onClick = {
+                    isVerifying = true
                     scope.launch {
-                        if (preferencesManager.verifyAppLockPassword(password)) {
-                            onPasswordVerified()
-                        } else {
-                            isError = true
+                        try {
+                            if (preferencesManager.verifyAppLockPassword(password)) {
+                                onPasswordVerified()
+                            } else {
+                                isError = true
+                            }
+                        } finally {
+                            isVerifying = false
                         }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = password.isNotBlank()
+                enabled = password.isNotBlank() && !isVerifying
             ) {
                 Icon(Icons.Default.LockOpen, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(localized("Войти"))
+            }
+
+            if (isVerifying) {
+                Spacer(modifier = Modifier.height(8.dp))
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
             if (onBiometricClick != null) {

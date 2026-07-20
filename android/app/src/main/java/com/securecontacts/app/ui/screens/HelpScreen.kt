@@ -69,10 +69,8 @@ fun HelpScreen(
             SetHelpPasswordDialog(
                 onDismiss = { /* Cannot dismiss */ },
                 onConfirm = { password ->
-                    scope.launch {
-                        if (onSetPassword(password)) {
-                            showPasswordDialog = false
-                        }
+                    if (onSetPassword(password)) {
+                        showPasswordDialog = false
                     }
                 }
             )
@@ -396,11 +394,13 @@ fun HelpContactCard(
 @Composable
 fun SetHelpPasswordDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: suspend (String) -> Unit
 ) {
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
+    var isSubmitting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -421,7 +421,8 @@ fun SetHelpPasswordDialog(
                     label = { Text(localized("Пароль")) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSubmitting
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
@@ -434,6 +435,7 @@ fun SetHelpPasswordDialog(
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSubmitting,
                     isError = showError,
                     supportingText = if (showError) {
                         { Text(localized("Пароли не совпадают")) }
@@ -445,14 +447,25 @@ fun SetHelpPasswordDialog(
             TextButton(
                 onClick = {
                     if (password.length >= 8 && password == confirmPassword) {
-                        onConfirm(password)
+                        isSubmitting = true
+                        scope.launch {
+                            try {
+                                onConfirm(password)
+                            } finally {
+                                isSubmitting = false
+                            }
+                        }
                     } else {
                         showError = true
                     }
                 },
-                enabled = password.length >= 8 && confirmPassword.isNotEmpty()
+                enabled = password.length >= 8 && confirmPassword.isNotEmpty() && !isSubmitting
             ) {
-                Text(localized("Установить"))
+                if (isSubmitting) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(localized("Установить"))
+                }
             }
         },
         dismissButton = null

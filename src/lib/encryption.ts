@@ -2,6 +2,12 @@
 const ALGORITHM = "AES-GCM";
 const KEY_LENGTH = 256;
 const PASSWORD_HASH_ITERATIONS = 310000;
+const BACKUP_KDF_ITERATIONS = 100000;
+export const MIN_PASSWORD_HASH_ITERATIONS = 100000;
+export const MAX_PASSWORD_HASH_ITERATIONS = 2000000;
+export const MAX_PASSWORD_LENGTH = 1024;
+export const MAX_PLAINTEXT_BYTES = 25 * 1024 * 1024;
+export const MAX_ENCRYPTED_INPUT_LENGTH = 36 * 1024 * 1024;
 
 // Base64 encoding that works in both browser and Capacitor
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -36,7 +42,7 @@ async function getKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
     {
       name: "PBKDF2",
       salt: salt as BufferSource,
-      iterations: 100000,
+      iterations: BACKUP_KDF_ITERATIONS,
       hash: "SHA-256",
     },
     keyMaterial,
@@ -48,6 +54,12 @@ async function getKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
 
 export async function encryptData(data: string, password: string): Promise<string> {
   const encoder = new TextEncoder();
+  if (!password || password.length > MAX_PASSWORD_LENGTH) {
+    throw new Error("Некорректный пароль");
+  }
+  if (encoder.encode(data).byteLength > MAX_PLAINTEXT_BYTES) {
+    throw new Error("Размер данных превышает допустимый предел");
+  }
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await getKey(password, salt);
@@ -70,9 +82,15 @@ export async function encryptData(data: string, password: string): Promise<strin
 
 export async function decryptData(encryptedData: string, password: string): Promise<string> {
   try {
+    if (!password || password.length > MAX_PASSWORD_LENGTH || encryptedData.length > MAX_ENCRYPTED_INPUT_LENGTH) {
+      throw new Error("Некорректные входные данные");
+    }
     // Decode from base64 using Capacitor-compatible method
     const combinedBuffer = base64ToArrayBuffer(encryptedData);
     const combined = new Uint8Array(combinedBuffer);
+    if (combined.length < 44 || combined.length > MAX_PLAINTEXT_BYTES + 44) {
+      throw new Error("Некорректные входные данные");
+    }
 
     // Extract salt, iv, and encrypted data
     const salt = combined.slice(0, 16);
@@ -86,6 +104,9 @@ export async function decryptData(encryptedData: string, password: string): Prom
       key,
       data
     );
+    if (decrypted.byteLength > MAX_PLAINTEXT_BYTES) {
+      throw new Error("Размер данных превышает допустимый предел");
+    }
 
     const decoder = new TextDecoder();
     return decoder.decode(decrypted);
@@ -99,6 +120,9 @@ export async function createPasswordDigest(password: string): Promise<{
   salt: string;
   iterations: number;
 }> {
+  if (!password || password.length > MAX_PASSWORD_LENGTH) {
+    throw new Error("Некорректный пароль");
+  }
   const salt = crypto.getRandomValues(new Uint8Array(32));
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
@@ -131,6 +155,12 @@ export async function verifyPasswordDigest(
   iterations: number,
 ): Promise<boolean> {
   try {
+    if (!password || password.length > MAX_PASSWORD_LENGTH ||
+      !Number.isInteger(iterations) ||
+      iterations < MIN_PASSWORD_HASH_ITERATIONS ||
+      iterations > MAX_PASSWORD_HASH_ITERATIONS) {
+      return false;
+    }
     const keyMaterial = await crypto.subtle.importKey(
       "raw",
       new TextEncoder().encode(password),

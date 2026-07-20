@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.Instant
 import java.time.ZoneOffset
+import java.time.Year
 import java.time.temporal.ChronoUnit
 
 class ContactRepository(
@@ -26,6 +27,14 @@ class ContactRepository(
     private val searchHistoryDao: SearchHistoryDao,
     private val database: AppDatabase = AppDatabase.requireInstance()
 ) {
+    private fun LocalDate.withAnniversaryYear(year: Int): LocalDate {
+        return if (monthValue == 2 && dayOfMonth == 29 && !Year.isLeap(year.toLong())) {
+            LocalDate.of(year, 2, 28)
+        } else {
+            withYear(year)
+        }
+    }
+
     suspend fun <T> withTransaction(block: suspend () -> T): T =
         database.withTransaction { block() }
 
@@ -426,14 +435,15 @@ class ContactRepository(
                     val birthdayDate = Instant.ofEpochMilli(birthdayMillis)
                         .atZone(ZoneOffset.UTC)
                         .toLocalDate()
-                    val thisYearBirthday = birthdayDate.withYear(today.year)
+                    val thisYearBirthday = birthdayDate.withAnniversaryYear(today.year)
                     val nextBirthday = if (thisYearBirthday.isBefore(today)) {
                         thisYearBirthday.plusYears(1)
                     } else {
                         thisYearBirthday
                     }
                     val daysLeft = ChronoUnit.DAYS.between(today, nextBirthday).toInt()
-                    val age = nextBirthday.year - birthdayDate.year
+                    val age = today.year - birthdayDate.year -
+                        if (thisYearBirthday.isAfter(today)) 1 else 0
 
                     dateItems.add(DateItem(
                         contactId = contact.id,
@@ -457,7 +467,7 @@ class ContactRepository(
                 val daysLeft = ChronoUnit.DAYS.between(today, eventDate).toInt()
 
                 if (event.isRecurring) {
-                    val thisYearEvent = eventDate.withYear(today.year)
+                    val thisYearEvent = eventDate.withAnniversaryYear(today.year)
                     val nextEvent = if (thisYearEvent.isBefore(today)) {
                         thisYearEvent.plusYears(1)
                     } else {

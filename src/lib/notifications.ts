@@ -131,29 +131,62 @@ export const notificationService = {
       const contactMap = new Map(contacts.map((c) => [c.id, c.name]));
 
       const pending = await LocalNotifications.getPending();
-      if (pending.notifications.length > 0) {
-        await LocalNotifications.cancel({ notifications: pending.notifications });
+      const pendingIds = new Set(pending.notifications.map((notification) => notification.id));
+      const now = new Date();
+      const activeReminders = reminders.filter((reminder) => {
+        if (!reminder.dueAt || reminder.isDone) return false;
+        const dueDate = new Date(reminder.dueAt);
+        return !Number.isNaN(dueDate.getTime()) && dueDate > now;
+      });
+      const activeNotificationIds = new Set(
+        activeReminders
+          .map((reminder) => reminder.notificationId)
+          .filter((id): id is number => id !== null),
+      );
+      const staleNotifications = pending.notifications.filter(
+        (notification) => !activeNotificationIds.has(notification.id),
+      );
+      if (staleNotifications.length > 0) {
+        await LocalNotifications.cancel({ notifications: staleNotifications });
       }
 
       for (const reminder of reminders) {
-        if (reminder.dueAt && !reminder.isDone) {
-          const dueDate = new Date(reminder.dueAt);
-          if (dueDate > new Date()) {
-            const contactName = reminder.contactId
-              ? contactMap.get(reminder.contactId)
-              : undefined;
-            const notificationId = await notificationService.scheduleReminder(
-              reminder,
-              contactName
-            );
-            if (notificationId !== null && notificationId !== reminder.notificationId) {
-              storage.updateReminder(reminder.id, {
-                ...reminder,
-                notificationId,
-                updatedAt: new Date().toISOString(),
-              });
-            }
+        const dueDate = reminder.dueAt ? new Date(reminder.dueAt) : null;
+        const isActive = Boolean(
+          dueDate && !Number.isNaN(dueDate.getTime()) && !reminder.isDone && dueDate > now,
+        );
+        if (!isActive) {
+          if (reminder.notificationId !== null) {
+            await notificationService.cancelNotification(reminder.notificationId);
+            storage.updateReminder(reminder.id, {
+              ...reminder,
+              notificationId: null,
+              updatedAt: new Date().toISOString(),
+            });
           }
+          continue;
+        }
+
+        if (reminder.notificationId !== null && pendingIds.has(reminder.notificationId)) {
+          continue;
+        }
+
+        if (reminder.notificationId !== null) {
+          await notificationService.cancelNotification(reminder.notificationId);
+        }
+        const contactName = reminder.contactId
+          ? contactMap.get(reminder.contactId)
+          : undefined;
+        const notificationId = await notificationService.scheduleReminder(
+          reminder,
+          contactName
+        );
+        if (notificationId !== null) {
+          storage.updateReminder(reminder.id, {
+            ...reminder,
+            notificationId,
+            updatedAt: new Date().toISOString(),
+          });
         }
       }
     } catch (error) {

@@ -1,6 +1,11 @@
 import { z } from "zod";
 import type { Contact } from "@/types/contact";
 import type { Reminder } from "@/types/reminder";
+import {
+  MAX_PASSWORD_HASH_ITERATIONS,
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_HASH_ITERATIONS,
+} from "@/lib/encryption";
 
 const STORAGE_KEY = "secure-contacts";
 const REMINDERS_STORAGE_KEY = "secure-reminders";
@@ -17,6 +22,14 @@ const isValidDateOnly = (value: string): boolean => {
 
 const dateOnlySchema = z.string().refine(isValidDateOnly);
 const optionalTextSchema = z.string().optional();
+export const isSafeExternalUrl = (value: string): boolean => {
+  try {
+    const protocol = new URL(value.trim()).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+};
 const tagSchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(1),
@@ -24,7 +37,7 @@ const tagSchema = z.object({
 }).strict();
 const socialMediaSchema = z.object({
   platform: z.string(),
-  url: z.string(),
+  url: z.string().trim().transform((value) => value === "" || isSafeExternalUrl(value) ? value : ""),
 }).strict();
 const eventSchema = z.object({
   id: z.string().min(1),
@@ -40,10 +53,10 @@ const contactSchema = z.object({
   workplace: optionalTextSchema,
   position: optionalTextSchema,
   source: optionalTextSchema,
-  passwordHash: z.string().min(1).optional(),
-  passwordSalt: z.string().min(1).optional(),
-  passwordIterations: z.number().int().positive().optional(),
-  password: z.string().min(1).optional(),
+  passwordHash: z.string().min(1).max(256).optional(),
+  passwordSalt: z.string().min(1).max(256).optional(),
+  passwordIterations: z.number().int().min(MIN_PASSWORD_HASH_ITERATIONS).max(MAX_PASSWORD_HASH_ITERATIONS).optional(),
+  password: z.string().min(1).max(MAX_PASSWORD_LENGTH).optional(),
   notes: optionalTextSchema,
   avatar: optionalTextSchema,
   tags: z.array(tagSchema).optional(),
