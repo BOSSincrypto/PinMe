@@ -63,7 +63,7 @@ const contactSchema = z.object({
   birthday: z.union([z.literal(""), dateOnlySchema]).optional(),
   socialMedia: z.array(socialMediaSchema).optional(),
   events: z.array(eventSchema).optional(),
-  additionalInfo: z.record(z.string()).optional(),
+  additionalInfo: z.record(z.string(), z.string()).optional(),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
 }).strict().superRefine((contact, context) => {
