@@ -34,12 +34,12 @@ class PreferencesManager(private val context: Context) {
     }
 
     val hasBackupPassword: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[BACKUP_PASSWORD_HASH] != null
+        prefs[BACKUP_PASSWORD_HASH] != null && prefs[BACKUP_PASSWORD_SALT] != null
     }
 
     suspend fun hasHelpPassword(): Boolean {
         val prefs = context.dataStore.data.first()
-        return prefs[HELP_PASSWORD_HASH] != null
+        return prefs[HELP_PASSWORD_HASH] != null && prefs[HELP_PASSWORD_SALT] != null
     }
 
     val isBiometricEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -166,7 +166,7 @@ class PreferencesManager(private val context: Context) {
     }
 
     val hasAppLockPassword: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[APP_LOCK_PASSWORD_HASH] != null
+        prefs[APP_LOCK_PASSWORD_HASH] != null && prefs[APP_LOCK_PASSWORD_SALT] != null
     }
 
     suspend fun setAppLockPassword(password: String) {

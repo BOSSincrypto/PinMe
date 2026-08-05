@@ -27,7 +27,7 @@ fun SetupBackupPasswordScreen(
     var helpPassword by remember { mutableStateOf("") }
     var confirmHelpPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var currentStep by remember { mutableStateOf(0) }
+    var currentStep by remember { mutableIntStateOf(0) }
 
     val isBackupPasswordValid = backupPassword.length >= 8 && backupPassword == confirmBackupPassword
     val isHelpPasswordValid = helpPassword.length >= 8 && helpPassword == confirmHelpPassword && helpPassword != backupPassword
@@ -243,8 +243,8 @@ fun UnlockContactDialog(
     onDismiss: () -> Unit,
     onPasswordSubmit: suspend (String) -> Unit,
     onBiometricClick: (() -> Unit)?,
-    isError: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isError: Boolean = false
 ) {
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }

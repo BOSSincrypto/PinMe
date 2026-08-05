@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { storage } from "@/lib/storage";
 import { ContactFormData } from "@/types/contact";
 import { ContactForm } from "@/components/ContactForm";

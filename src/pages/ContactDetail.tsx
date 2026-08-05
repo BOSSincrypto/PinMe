@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router";
 import { isSafeExternalUrl, storage } from "@/lib/storage";
 import { notificationService } from "@/lib/notifications";
 import { Contact, ContactFormData } from "@/types/contact";
@@ -224,22 +224,33 @@ const ContactDetail = () => {
       ...editingReminder,
       ...data,
       contactId: id,
+      notificationId: null,
       updatedAt: new Date().toISOString(),
     };
 
-    const notificationId = await notificationService.rescheduleReminder(
-      updatedReminder,
-      contact?.name
-    );
-    updatedReminder.notificationId = notificationId;
-
     if (!storage.updateReminder(editingReminder.id, updatedReminder)) {
-      if (notificationId !== null) {
-        await notificationService.cancelNotification(notificationId);
-      }
       toast({
         title: "Ошибка сохранения",
         description: "Не удалось сохранить напоминание",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const notificationId = await notificationService.rescheduleReminder(
+      { ...updatedReminder, notificationId: editingReminder.notificationId },
+      contact?.name
+    );
+
+    if (!storage.updateReminder(editingReminder.id, { ...updatedReminder, notificationId })) {
+      if (notificationId !== null) {
+        await notificationService.cancelNotification(notificationId);
+      }
+      loadReminders(id);
+      setEditingReminder(null);
+      toast({
+        title: "Напоминание сохранено без уведомления",
+        description: "Не удалось сохранить идентификатор уведомления",
         variant: "destructive",
       });
       return;
@@ -276,11 +287,15 @@ const ContactDetail = () => {
   const handleDeleteReminder = async () => {
     if (!deletingReminder || !id) return;
 
-    if (deletingReminder.notificationId !== null) {
-      await notificationService.cancelNotification(deletingReminder.notificationId);
+    if (!storage.deleteReminder(deletingReminder.id)) {
+      toast({
+        title: "Ошибка удаления",
+        description: "Не удалось удалить напоминание",
+        variant: "destructive",
+      });
+      return;
     }
-
-    storage.deleteReminder(deletingReminder.id);
+    await notificationService.cancelReminderNotification(deletingReminder);
     loadReminders(id);
     setDeletingReminder(null);
     toast({

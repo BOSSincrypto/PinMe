@@ -240,17 +240,19 @@ fun ContactDetailScreen(
                             modifier = Modifier.clickable {
                                 val shareText = buildString {
                                     append("${contact.name}\n")
-                                    if (contact.phone.isNotEmpty()) append("Тел: ${contact.phone}\n")
-                                    if (contact.email.isNotEmpty()) append("Эл. почта: ${contact.email}\n")
-                                    if (contact.workplace.isNotEmpty()) append("Работа: ${contact.workplace}\n")
-                                    if (contact.position.isNotEmpty()) append("Должность: ${contact.position}\n")
-                                    if (contact.address.isNotEmpty()) append("Адрес: ${contact.address}\n")
+                                    if (contact.phone.isNotEmpty()) append("${localized("Телефон: %s", contact.phone)}\n")
+                                    if (contact.email.isNotEmpty()) append("${localized("Эл. почта: %s", contact.email)}\n")
+                                    if (contact.workplace.isNotEmpty()) append("${localized("Работа: %s", contact.workplace)}\n")
+                                    if (contact.position.isNotEmpty()) append("${localized("Должность: %s", contact.position)}\n")
+                                    if (contact.address.isNotEmpty()) append("${localized("Адрес: %s", contact.address)}\n")
                                 }
                                 val intent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
                                     putExtra(Intent.EXTRA_TEXT, shareText)
                                 }
-                                context.startActivity(Intent.createChooser(intent, localized("Поделиться контактом")))
+                                runCatching {
+                                    context.startActivity(Intent.createChooser(intent, localized("Поделиться контактом")))
+                                }
                             }
                         ) {
                             Icon(
@@ -334,7 +336,9 @@ fun ContactDetailScreen(
                                     val intent = Intent(Intent.ACTION_SENDTO).apply {
                                         data = Uri.parse("mailto:${contact.email}")
                                     }
-                                    context.startActivity(Intent.createChooser(intent, localized("Отправить email")))
+                                    runCatching {
+                                        context.startActivity(Intent.createChooser(intent, localized("Отправить email")))
+                                    }
                                 }
                             ) {
                                 Icon(
@@ -364,7 +368,7 @@ fun ContactDetailScreen(
                                 val intent = Intent(Intent.ACTION_DIAL).apply {
                                     data = Uri.parse("tel:${contact.phone}")
                                 }
-                                context.startActivity(intent)
+                                runCatching { context.startActivity(intent) }
                             },
                         shape = RoundedCornerShape(16.dp)
                     ) {
@@ -406,7 +410,9 @@ fun ContactDetailScreen(
                                 val intent = Intent(Intent.ACTION_SENDTO).apply {
                                     data = Uri.parse("mailto:${contact.email}")
                                 }
-                                context.startActivity(Intent.createChooser(intent, localized("Отправить email")))
+                                runCatching {
+                                    context.startActivity(Intent.createChooser(intent, localized("Отправить email")))
+                                }
                             },
                         shape = RoundedCornerShape(16.dp)
                     ) {
@@ -1026,7 +1032,7 @@ fun AddConversationDialog(
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis()
     )
-    var selectedDate by remember { mutableStateOf(System.currentTimeMillis()) }
+    var selectedDate by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

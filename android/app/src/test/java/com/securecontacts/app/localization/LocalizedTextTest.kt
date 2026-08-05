@@ -20,6 +20,9 @@ class LocalizedTextTest {
         assertEquals("Contacts", localized("Контакты"))
         assertEquals("Imported: 2 contacts", localized("Импортировано: %d контактов", 2))
         assertEquals("Version 1.0.0-alpha.1", localized("Версия %s", "1.0.0-alpha.1"))
+        assertEquals("Phone: +123", localized("Телефон: %s", "+123"))
+        assertEquals("Email: user@example.com", localized("Эл. почта: %s", "user@example.com"))
+        assertEquals("Address: Main Street", localized("Адрес: %s", "Main Street"))
     }
 
     @Test

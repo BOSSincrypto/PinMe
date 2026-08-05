@@ -214,7 +214,7 @@ fun SearchScreen(
                                     val intent = Intent(Intent.ACTION_DIAL).apply {
                                         data = Uri.parse("tel:${contact.phone}")
                                     }
-                                    context.startActivity(intent)
+                                    runCatching { context.startActivity(intent) }
                                 }
                             }
                         )

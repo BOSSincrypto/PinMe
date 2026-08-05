@@ -247,6 +247,8 @@ private val englishText by lazy(LazyThreadSafetyMode.PUBLICATION) { mapOf(
     "%d результат" to "%d result",
     "%d результатов" to "%d results",
     "Телефон: %s" to "Phone: %s",
+    "Эл. почта: %s" to "Email: %s",
+    "Адрес: %s" to "Address: %s",
     "Работа: %s" to "Workplace: %s",
     "Должность: %s" to "Position: %s",
     "Источник: %s" to "Source: %s",

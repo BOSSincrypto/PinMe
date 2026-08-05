@@ -130,3 +130,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ steps.release.outputs.release_tag }}" "${{ steps.artifact.outputs.apk }}" "${{ steps.artifact.outputs.checksum }}" --target "$GITHUB_SHA" --title "${{ steps.release.outputs.release_title }}" --notes "Автоматическая alpha release-сборка из commit $GITHUB_SHA. Для обновления предыдущих debug-сборок потребуется удалить старую установку один раз: прежние APK были подписаны временными ключами." --prerelease
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/pinme-release.jks"

@@ -55,6 +55,12 @@ export const notificationService = {
       return null;
     }
 
+    const dueDate = new Date(reminder.dueAt);
+    if (Number.isNaN(dueDate.getTime()) || dueDate <= new Date()) {
+      return null;
+    }
+
+    let notificationId: number | null = null;
     try {
       const hasPermission = await notificationService.checkPermissions();
       if (!hasPermission) {
@@ -65,12 +71,7 @@ export const notificationService = {
         }
       }
 
-      const notificationId = generateNotificationId();
-      const dueDate = new Date(reminder.dueAt);
-
-      if (Number.isNaN(dueDate.getTime()) || dueDate <= new Date()) {
-        return null;
-      }
+      notificationId = generateNotificationId();
 
       const title = contactName ? "Напоминание контакта" : "Напоминание";
 
@@ -93,6 +94,9 @@ export const notificationService = {
       await LocalNotifications.schedule(options);
       return notificationId;
     } catch (error) {
+      if (notificationId !== null) {
+        issuedNotificationIds.delete(notificationId);
+      }
       console.error("Error scheduling notification:", error);
       return null;
     }
@@ -101,6 +105,7 @@ export const notificationService = {
   cancelNotification: async (notificationId: number): Promise<void> => {
     try {
       await LocalNotifications.cancel({ notifications: [{ id: notificationId }] });
+      issuedNotificationIds.delete(notificationId);
     } catch (error) {
       console.error("Error canceling notification:", error);
     }

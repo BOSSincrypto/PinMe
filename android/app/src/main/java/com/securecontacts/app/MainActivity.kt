@@ -20,8 +20,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
@@ -115,7 +116,7 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val isDarkTheme by preferencesManager.isDarkThemeEnabled.collectAsState(initial = true)
-            val hasBackupPassword by preferencesManager.hasBackupPassword.collectAsState(initial = false)
+            val hasBackupPasswordState: Boolean? by preferencesManager.hasBackupPassword.collectAsState(initial = null)
             val appLanguage by preferencesManager.appLanguage.collectAsState(initial = AppLanguage.ENGLISH)
             var databaseReady by remember { mutableStateOf<AppDatabase?>(null) }
 
@@ -159,25 +160,29 @@ class MainActivity : FragmentActivity() {
                             createdManager
                         }
 
-                        if (!hasBackupPassword) {
-                            SetupBackupPasswordScreen(
-                                onSetupComplete = { backupPassword, helpPassword ->
-                                    lifecycleScope.launch {
-                                        preferencesManager.completeInitialSetup(backupPassword, helpPassword)
+                        when (hasBackupPasswordState) {
+                            null -> CircularProgressIndicator()
+                            false -> {
+                                SetupBackupPasswordScreen(
+                                    onSetupComplete = { backupPassword, helpPassword ->
+                                        lifecycleScope.launch {
+                                            preferencesManager.completeInitialSetup(backupPassword, helpPassword)
+                                        }
                                     }
-                                }
-                            )
-                        } else {
-                            MainApp(
-                                repository = currentRepository,
-                                preferencesManager = preferencesManager,
-                                biometricManager = biometricManager,
-                                exportImportManager = currentExportImportManager,
-                                unlockSession = unlockSession,
-                                activity = this@MainActivity,
-                                appVersion = appVersion,
-                                appLanguage = appLanguage
-                            )
+                                )
+                            }
+                            true -> {
+                                MainApp(
+                                    repository = currentRepository,
+                                    preferencesManager = preferencesManager,
+                                    biometricManager = biometricManager,
+                                    exportImportManager = currentExportImportManager,
+                                    unlockSession = unlockSession,
+                                    activity = this@MainActivity,
+                                    appVersion = appVersion,
+                                    appLanguage = appLanguage
+                                )
+                            }
                         }
                     }
                 }
@@ -321,7 +326,9 @@ private fun MainApp(
         Screen.Help.route,
         Screen.Settings.route
     )
-    val useNavigationRail = LocalConfiguration.current.screenWidthDp >= 600
+    val windowInfo = LocalWindowInfo.current
+    val density = LocalDensity.current
+    val useNavigationRail = with(density) { windowInfo.containerSize.width.toDp() >= 600.dp }
 
     Scaffold(
         bottomBar = {

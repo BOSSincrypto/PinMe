@@ -20,7 +20,7 @@ import {
   Trash2,
   AlertCircle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { format, isToday, isTomorrow, isPast, differenceInDays } from "date-fns";
 import { ru } from "date-fns/locale";
 import { ReminderDialog } from "@/components/ReminderDialog";
@@ -138,26 +138,37 @@ const Reminders = () => {
     const updatedReminder: Reminder = {
       ...editingReminder,
       ...data,
+      notificationId: null,
       updatedAt: new Date().toISOString(),
     };
 
-    // Reschedule notification
     const contact = data.contactId
       ? contacts.find((c) => c.id === data.contactId)
       : undefined;
-    const notificationId = await notificationService.rescheduleReminder(
-      updatedReminder,
-      contact?.name
-    );
-    updatedReminder.notificationId = notificationId;
 
     if (!storage.updateReminder(editingReminder.id, updatedReminder)) {
-      if (notificationId !== null) {
-        await notificationService.cancelNotification(notificationId);
-      }
       toast({
         title: "Ошибка сохранения",
         description: "Не удалось сохранить напоминание",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const notificationId = await notificationService.rescheduleReminder(
+      { ...updatedReminder, notificationId: editingReminder.notificationId },
+      contact?.name
+    );
+
+    if (!storage.updateReminder(editingReminder.id, { ...updatedReminder, notificationId })) {
+      if (notificationId !== null) {
+        await notificationService.cancelNotification(notificationId);
+      }
+      loadData();
+      setEditingReminder(null);
+      toast({
+        title: "Напоминание сохранено без уведомления",
+        description: "Не удалось сохранить идентификатор уведомления",
         variant: "destructive",
       });
       return;
@@ -195,12 +206,15 @@ const Reminders = () => {
   const handleDeleteReminder = async () => {
     if (!deletingReminder) return;
 
-    // Cancel notification if exists
-    if (deletingReminder.notificationId !== null) {
-      await notificationService.cancelNotification(deletingReminder.notificationId);
+    if (!storage.deleteReminder(deletingReminder.id)) {
+      toast({
+        title: "Ошибка удаления",
+        description: "Не удалось удалить напоминание",
+        variant: "destructive",
+      });
+      return;
     }
-
-    storage.deleteReminder(deletingReminder.id);
+    await notificationService.cancelReminderNotification(deletingReminder);
     loadData();
     setDeletingReminder(null);
     toast({

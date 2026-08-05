@@ -224,10 +224,10 @@ fun ReminderCard(
     onClick: () -> Unit,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
     isOverdue: Boolean = false,
     isToday: Boolean = false,
-    isCompleted: Boolean = false,
-    modifier: Modifier = Modifier
+    isCompleted: Boolean = false
 ) {
     val reminder = reminderWithContact.reminder
     val contact = reminderWithContact.contact
