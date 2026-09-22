@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { HELP_TROUBLE_OPTIONS, type Contact } from "@/types/contact";
+import { DEBT_DIRECTIONS, HELP_TROUBLE_OPTIONS, type Contact } from "@/types/contact";
 import type { Reminder } from "@/types/reminder";
 import {
   MAX_PASSWORD_HASH_ITERATIONS,
@@ -44,6 +44,15 @@ const eventSchema = z.object({
   title: z.string().trim().min(1),
   date: dateOnlySchema,
 }).strict();
+const debtSchema = z.object({
+  id: z.string().min(1),
+  direction: z.enum(DEBT_DIRECTIONS),
+  description: z.string().trim().min(1),
+  amount: z.number().nonnegative().finite().optional(),
+  isOpen: z.boolean(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
+}).strict();
 
 const contactSchema = z.object({
   id: z.string().min(1),
@@ -65,6 +74,7 @@ const contactSchema = z.object({
   events: z.array(eventSchema).optional(),
   additionalInfo: z.record(z.string(), z.string()).optional(),
   helpInTrouble: z.enum(HELP_TROUBLE_OPTIONS).default("unsure"),
+  debts: z.array(debtSchema).optional(),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
 }).strict().superRefine((contact, context) => {
