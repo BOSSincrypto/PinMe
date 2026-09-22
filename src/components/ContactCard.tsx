@@ -1,4 +1,4 @@
-import { Contact, HELP_TROUBLE_BADGE_CLASSES, HELP_TROUBLE_LABELS } from "@/types/contact";
+import { Contact, HELP_TROUBLE_BADGE_CLASSES, HELP_TROUBLE_LABELS, DEBT_DIRECTION_LABELS, DEBT_DIRECTION_FILTER_CLASSES, DebtDirection, formatDebtAmount, getOpenDebtsTotal } from "@/types/contact";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +35,26 @@ export const ContactCard = ({ contact }: ContactCardProps) => {
                   {HELP_TROUBLE_LABELS[contact.helpInTrouble]}
                 </Badge>
               </div>
+              {(["owed_to_me", "i_owe"] as DebtDirection[]).some(
+                (direction) => getOpenDebtsTotal(contact.debts, direction) > 0
+              ) && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {(["owed_to_me", "i_owe"] as DebtDirection[]).map((direction) => {
+                    const total = getOpenDebtsTotal(contact.debts, direction);
+                    if (total === 0) {
+                      return null;
+                    }
+                    return (
+                      <Badge
+                        key={direction}
+                        className={`${DEBT_DIRECTION_FILTER_CLASSES[direction]} text-xs px-2 py-0.5`}
+                      >
+                        {DEBT_DIRECTION_LABELS[direction]}: {formatDebtAmount(total)}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
               {contact.tags && contact.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {contact.tags.map((tag) => (

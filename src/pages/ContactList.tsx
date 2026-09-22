@@ -6,6 +6,10 @@ import {
   HELP_TROUBLE_LABELS,
   HELP_TROUBLE_OPTIONS,
   HelpTroubleStatus,
+  DEBT_DIRECTIONS,
+  DEBT_DIRECTION_LABELS,
+  DEBT_DIRECTION_FILTER_CLASSES,
+  DebtDirection,
 } from "@/types/contact";
 import { ContactCard } from "@/components/ContactCard";
 import { Button } from "@/components/ui/button";
@@ -23,6 +27,7 @@ const ContactList = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [helpFilter, setHelpFilter] = useState<HelpTroubleStatus | null>(null);
+  const [debtFilter, setDebtFilter] = useState<DebtDirection | null>(null);
 
   useEffect(() => {
     loadContacts();
@@ -37,6 +42,14 @@ const ContactList = () => {
     if (helpFilter && contact.helpInTrouble !== helpFilter) {
       return false;
     }
+    if (
+      debtFilter &&
+      !(contact.debts ?? []).some(
+        (debt) => debt.isOpen && debt.direction === debtFilter
+      )
+    ) {
+      return false;
+    }
     const query = searchQuery.toLowerCase();
     return (
       contact.name.toLowerCase().includes(query) ||
@@ -45,7 +58,12 @@ const ContactList = () => {
       contact.workplace?.toLowerCase().includes(query) ||
       contact.position?.toLowerCase().includes(query) ||
       contact.source?.toLowerCase().includes(query) ||
-      contact.tags?.some(tag => tag.name.toLowerCase().includes(query))
+      contact.tags?.some(tag => tag.name.toLowerCase().includes(query)) ||
+      contact.debts?.some(
+        (debt) =>
+          debt.description.toLowerCase().includes(query) ||
+          debt.amount !== undefined && String(debt.amount).includes(query)
+      )
     );
   });
 
@@ -73,16 +91,13 @@ const ContactList = () => {
             />
           </div>
 
-          <div
-            className="flex flex-wrap items-center gap-2"
-            role="group"
-            aria-label="Фильтр по полю «Поможет ли в трудной ситуации»"
-          >
+          <div className="flex flex-wrap items-center gap-2">
             {HELP_TROUBLE_OPTIONS.map((option) => (
               <button
                 key={option}
                 type="button"
                 aria-pressed={helpFilter === option}
+                aria-label={`Фильтр «Поможет ли в трудной ситуации»: ${HELP_TROUBLE_LABELS[option]}`}
                 onClick={() =>
                   setHelpFilter(helpFilter === option ? null : option)
                 }
@@ -96,6 +111,25 @@ const ContactList = () => {
                 </Badge>
               </button>
             ))}
+            {DEBT_DIRECTIONS.map((direction) => (
+              <button
+                key={direction}
+                type="button"
+                aria-pressed={debtFilter === direction}
+                aria-label={`Фильтр открытых долгов: ${DEBT_DIRECTION_LABELS[direction]}`}
+                onClick={() =>
+                  setDebtFilter(debtFilter === direction ? null : direction)
+                }
+              >
+                <Badge
+                  className={`cursor-pointer transition-opacity ${
+                    DEBT_DIRECTION_FILTER_CLASSES[direction]
+                  } ${debtFilter === direction ? "opacity-100" : "opacity-40"}`}
+                >
+                  {DEBT_DIRECTION_LABELS[direction]}
+                </Badge>
+              </button>
+            ))}
           </div>
         </header>
 
@@ -103,11 +137,11 @@ const ContactList = () => {
           {filteredContacts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">
-                {searchQuery || helpFilter
+                {searchQuery || helpFilter || debtFilter
                   ? "Контакты не найдены"
                   : "У вас пока нет контактов"}
               </p>
-              {!searchQuery && !helpFilter && (
+              {!searchQuery && !helpFilter && !debtFilter && (
                 <Link to="/add-contact">
                   <Button className="mt-4">
                     <Plus className="w-5 h-5 mr-2" />

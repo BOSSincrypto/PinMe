@@ -2,16 +2,17 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { isSafeExternalUrl, storage } from "@/lib/storage";
 import { notificationService } from "@/lib/notifications";
-import { Contact, ContactFormData, HELP_TROUBLE_BADGE_CLASSES, HELP_TROUBLE_LABELS } from "@/types/contact";
+import { Contact, ContactFormData, HELP_TROUBLE_BADGE_CLASSES, HELP_TROUBLE_LABELS, DEBT_DIRECTION_LABELS, DEBT_DIRECTION_FILTER_CLASSES, DebtEntry, DebtDirection, formatDebtAmount, getOpenDebtsTotal } from "@/types/contact";
 import { Reminder, PRIORITY_LABELS, PRIORITY_COLORS } from "@/types/reminder";
 import { ContactForm } from "@/components/ContactForm";
 import { PasswordDialog } from "@/components/PasswordDialog";
 import { ReminderDialog } from "@/components/ReminderDialog";
+import { DebtDialog, DebtDialogResult } from "@/components/DebtDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, User, Phone, Mail, Lock, Briefcase, Calendar, Cake, Bell, Plus, Check, Clock } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, User, Phone, Mail, Lock, Briefcase, Calendar, Cake, Bell, Plus, Check, Clock, HandCoins, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -41,6 +42,9 @@ const ContactDetail = () => {
   const [showReminderDialog, setShowReminderDialog] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
   const [deletingReminder, setDeletingReminder] = useState<Reminder | null>(null);
+  const [showDebtDialog, setShowDebtDialog] = useState(false);
+  const [editingDebt, setEditingDebt] = useState<DebtEntry | null>(null);
+  const [deletingDebt, setDeletingDebt] = useState<DebtEntry | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -303,6 +307,73 @@ const ContactDetail = () => {
     });
   };
 
+  const handleToggleDebtOpen = (debt: DebtEntry) => {
+    if (!contact || !id) return;
+    const updatedDebts = (contact.debts ?? []).map((entry) =>
+      entry.id === debt.id
+        ? { ...entry, isOpen: !entry.isOpen, updatedAt: new Date().toISOString() }
+        : entry
+    );
+    if (storage.updateContact(id, { ...contact, debts: updatedDebts })) {
+      setContact({ ...contact, debts: updatedDebts });
+    }
+  };
+
+  const handleDeleteDebt = () => {
+    if (!contact || !id || !deletingDebt) return;
+    const updatedDebts = (contact.debts ?? []).filter(
+      (entry) => entry.id !== deletingDebt.id
+    );
+    if (storage.updateContact(id, { ...contact, debts: updatedDebts })) {
+      setContact({ ...contact, debts: updatedDebts });
+    }
+    setDeletingDebt(null);
+  };
+
+  const handleAddDebt = (data: DebtDialogResult) => {
+    if (!contact || !id) return;
+    const now = new Date().toISOString();
+    const newDebt: DebtEntry = {
+      id: crypto.randomUUID(),
+      direction: data.direction,
+      description: data.description,
+      amount: data.amount,
+      isOpen: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const updatedDebts = [...(contact.debts ?? []), newDebt];
+    if (storage.updateContact(id, { ...contact, debts: updatedDebts })) {
+      setContact({ ...contact, debts: updatedDebts });
+      setShowDebtDialog(false);
+      toast({
+        title: "Долг добавлен",
+      });
+    }
+  };
+
+  const handleEditDebt = (data: DebtDialogResult) => {
+    if (!contact || !id || !editingDebt) return;
+    const updatedDebts = (contact.debts ?? []).map((entry) =>
+      entry.id === editingDebt.id
+        ? {
+            ...entry,
+            direction: data.direction,
+            description: data.description,
+            amount: data.amount,
+            updatedAt: new Date().toISOString(),
+          }
+        : entry
+    );
+    if (storage.updateContact(id, { ...contact, debts: updatedDebts })) {
+      setContact({ ...contact, debts: updatedDebts });
+      setEditingDebt(null);
+      toast({
+        title: "Долг обновлен",
+      });
+    }
+  };
+
   const formatDueDate = (dueAt: string | null): string => {
     if (!dueAt) return "Без срока";
     const date = new Date(dueAt);
@@ -327,6 +398,8 @@ const ContactDetail = () => {
   if (!contact) {
     return null;
   }
+
+  const debts = contact.debts ?? [];
 
   if (!isAuthenticated) {
     return (
@@ -615,6 +688,115 @@ const ContactDetail = () => {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
+                <HandCoins className="w-5 h-5" />
+                Долги
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDebtDialog(true)}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Добавить
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {debts.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Нет записей о долгах. Нажмите «Добавить», чтобы создать первую.
+              </p>
+            )}
+              {(["owed_to_me", "i_owe"] as DebtDirection[]).map((direction) => {
+                const dirDebts = debts.filter((debt) => debt.direction === direction);
+                if (dirDebts.length === 0) {
+                  return null;
+                }
+                return (
+                  <div key={direction} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">
+                        {DEBT_DIRECTION_LABELS[direction]}
+                      </span>
+                      <span className="text-sm font-semibold">
+                        {formatDebtAmount(getOpenDebtsTotal(contact.debts, direction))}
+                      </span>
+                    </div>
+                    {dirDebts.map((debt) => (
+                      <div
+                        key={debt.id}
+                        className={`p-3 rounded-lg border ${debt.isOpen ? "bg-card" : "opacity-60 bg-muted/30"}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`flex-shrink-0 rounded-full h-8 w-8 ${
+                              debt.isOpen
+                                ? "bg-green-500/20 text-green-500"
+                                : "bg-muted hover:bg-muted/80"
+                            }`}
+                            aria-label={
+                              debt.isOpen ? "Закрыть долг" : "Открыть долг заново"
+                            }
+                            onClick={() => handleToggleDebtOpen(debt)}
+                          >
+                            {debt.isOpen ? <Check className="w-4 h-4" /> : <RotateCcw className="w-4 h-4" />}
+                          </Button>
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className={`font-medium text-sm whitespace-pre-wrap ${
+                                debt.isOpen ? "" : "line-through text-muted-foreground"
+                              }`}
+                            >
+                              {debt.description}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                              <Badge
+                                className={`${DEBT_DIRECTION_FILTER_CLASSES[debt.direction]} text-xs`}
+                              >
+                                {DEBT_DIRECTION_LABELS[debt.direction]}
+                              </Badge>
+                              {debt.amount !== undefined && (
+                                <Badge variant="outline" className="text-xs">
+                                  {formatDebtAmount(debt.amount)}
+                                </Badge>
+                            )}
+                            </div>
+                          </div>
+                          <div className="flex gap-1 flex-shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              aria-label="Редактировать долг"
+                              onClick={() => setEditingDebt(debt)}
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              aria-label="Удалить долг"
+                              onClick={() => setDeletingDebt(debt)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
                 <Bell className="w-5 h-5" />
                 Напоминания
               </div>
@@ -744,6 +926,47 @@ const ContactDetail = () => {
           }
           title={editingReminder ? "Редактировать напоминание" : "Новое напоминание"}
         />
+
+        <DebtDialog
+          open={showDebtDialog || !!editingDebt}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowDebtDialog(false);
+              setEditingDebt(null);
+            }
+          }}
+          onSubmit={editingDebt ? handleEditDebt : handleAddDebt}
+          initialData={
+            editingDebt
+              ? {
+                  direction: editingDebt.direction,
+                  description: editingDebt.description,
+                  amount: editingDebt.amount,
+                }
+              : undefined
+          }
+          title={editingDebt ? "Редактировать долг" : "Новый долг"}
+        />
+
+        <AlertDialog
+          open={!!deletingDebt}
+          onOpenChange={(open) => !open && setDeletingDebt(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Удалить запись о долге?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Это действие нельзя отменить. Запись будет полностью удалена.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Отмена</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteDebt}>
+                Удалить
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <AlertDialog
           open={!!deletingReminder}
