@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ContactFormData } from "@/types/contact";
+import { ContactFormData, HELP_TROUBLE_LABELS, HELP_TROUBLE_OPTIONS } from "@/types/contact";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -46,6 +46,7 @@ export const ContactForm = ({
       socialMedia: [],
       events: [],
       additionalInfo: {},
+      helpInTrouble: "unsure",
     }
   );
 
@@ -306,6 +307,29 @@ export const ContactForm = ({
                 setFormData({ ...formData, birthday: e.target.value })
               }
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              Поможет ли в трудной ситуации <span className="text-destructive">*</span>
+            </Label>
+            <div
+              className="grid grid-cols-3 gap-2"
+              role="group"
+              aria-label="Поможет ли в трудной ситуации"
+            >
+              {HELP_TROUBLE_OPTIONS.map((option) => (
+                <Button
+                  key={option}
+                  type="button"
+                  variant={formData.helpInTrouble === option ? "default" : "outline"}
+                  aria-pressed={formData.helpInTrouble === option}
+                  onClick={() => setFormData({ ...formData, helpInTrouble: option })}
+                >
+                  {HELP_TROUBLE_LABELS[option]}
+                </Button>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-2">

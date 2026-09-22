@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { isSafeExternalUrl, storage } from "@/lib/storage";
 import { notificationService } from "@/lib/notifications";
-import { Contact, ContactFormData } from "@/types/contact";
+import { Contact, ContactFormData, HELP_TROUBLE_BADGE_CLASSES, HELP_TROUBLE_LABELS } from "@/types/contact";
 import { Reminder, PRIORITY_LABELS, PRIORITY_COLORS } from "@/types/reminder";
 import { ContactForm } from "@/components/ContactForm";
 import { PasswordDialog } from "@/components/PasswordDialog";
@@ -375,6 +375,7 @@ const ContactDetail = () => {
               socialMedia: contact.socialMedia,
               events: contact.events,
               additionalInfo: contact.additionalInfo,
+              helpInTrouble: contact.helpInTrouble,
             }}
             onSubmit={handleUpdate}
             onCancel={() => setIsEditing(false)}
@@ -476,6 +477,16 @@ const ContactDetail = () => {
                 <p className="font-medium">{contact.source}</p>
               </div>
             )}
+            <div>
+              <div className="text-muted-foreground text-sm mb-1.5">
+                Поможет ли в трудной ситуации
+              </div>
+              <Badge
+                className={`${HELP_TROUBLE_BADGE_CLASSES[contact.helpInTrouble]} px-3 py-1`}
+              >
+                {HELP_TROUBLE_LABELS[contact.helpInTrouble]}
+              </Badge>
+            </div>
             {contact.phone && (
               <div>
                 <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
