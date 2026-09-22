@@ -1,15 +1,28 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { storage } from "@/lib/storage";
-import { Contact } from "@/types/contact";
+import {
+  Contact,
+  HELP_TROUBLE_LABELS,
+  HELP_TROUBLE_OPTIONS,
+  HelpTroubleStatus,
+} from "@/types/contact";
 import { ContactCard } from "@/components/ContactCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Search } from "lucide-react";
+
+const HELP_TROUBLE_FILTER_CLASSES: Record<HelpTroubleStatus, string> = {
+  yes: "bg-green-500 hover:bg-green-500 text-white",
+  no: "bg-red-500 hover:bg-red-500 text-white",
+  unsure: "bg-amber-500 hover:bg-amber-500 text-white",
+};
 
 const ContactList = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [helpFilter, setHelpFilter] = useState<HelpTroubleStatus | null>(null);
 
   useEffect(() => {
     loadContacts();
@@ -21,6 +34,9 @@ const ContactList = () => {
   };
 
   const filteredContacts = contacts.filter((contact) => {
+    if (helpFilter && contact.helpInTrouble !== helpFilter) {
+      return false;
+    }
     const query = searchQuery.toLowerCase();
     return (
       contact.name.toLowerCase().includes(query) ||
@@ -56,17 +72,42 @@ const ContactList = () => {
               className="pl-10"
             />
           </div>
+
+          <div
+            className="flex flex-wrap items-center gap-2"
+            role="group"
+            aria-label="Фильтр по полю «Поможет ли в трудной ситуации»"
+          >
+            {HELP_TROUBLE_OPTIONS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={helpFilter === option}
+                onClick={() =>
+                  setHelpFilter(helpFilter === option ? null : option)
+                }
+              >
+                <Badge
+                  className={`cursor-pointer transition-opacity ${
+                    HELP_TROUBLE_FILTER_CLASSES[option]
+                  } ${helpFilter === option ? "opacity-100" : "opacity-40"}`}
+                >
+                  {HELP_TROUBLE_LABELS[option]}
+                </Badge>
+              </button>
+            ))}
+          </div>
         </header>
 
         <div className="space-y-3">
           {filteredContacts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">
-                {searchQuery
+                {searchQuery || helpFilter
                   ? "Контакты не найдены"
                   : "У вас пока нет контактов"}
               </p>
-              {!searchQuery && (
+              {!searchQuery && !helpFilter && (
                 <Link to="/add-contact">
                   <Button className="mt-4">
                     <Plus className="w-5 h-5 mr-2" />

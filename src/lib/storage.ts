@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Contact } from "@/types/contact";
+import { HELP_TROUBLE_OPTIONS, type Contact } from "@/types/contact";
 import type { Reminder } from "@/types/reminder";
 import {
   MAX_PASSWORD_HASH_ITERATIONS,
@@ -64,6 +64,7 @@ const contactSchema = z.object({
   socialMedia: z.array(socialMediaSchema).optional(),
   events: z.array(eventSchema).optional(),
   additionalInfo: z.record(z.string(), z.string()).optional(),
+  helpInTrouble: z.enum(HELP_TROUBLE_OPTIONS).default("unsure"),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
 }).strict().superRefine((contact, context) => {

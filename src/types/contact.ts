@@ -1,3 +1,19 @@
+export const HELP_TROUBLE_OPTIONS = ["yes", "no", "unsure"] as const;
+
+export type HelpTroubleStatus = (typeof HELP_TROUBLE_OPTIONS)[number];
+
+export const HELP_TROUBLE_LABELS: Record<HelpTroubleStatus, string> = {
+  yes: "Да",
+  no: "Нет",
+  unsure: "Не знаю",
+};
+
+export const HELP_TROUBLE_BADGE_CLASSES: Record<HelpTroubleStatus, string> = {
+  yes: "bg-green-500 hover:bg-green-500 text-white",
+  no: "bg-red-500 hover:bg-red-500 text-white",
+  unsure: "bg-amber-500 hover:bg-amber-500 text-white",
+};
+
 export interface Tag {
   id: string;
   name: string;
@@ -34,6 +50,7 @@ export interface Contact {
   socialMedia?: SocialMedia[];
   events?: ContactEvent[];
   additionalInfo?: Record<string, string>;
+  helpInTrouble: HelpTroubleStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -53,4 +70,5 @@ export interface ContactFormData {
   socialMedia?: SocialMedia[];
   events?: ContactEvent[];
   additionalInfo?: Record<string, string>;
+  helpInTrouble: HelpTroubleStatus;
 }

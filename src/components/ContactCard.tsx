@@ -1,4 +1,4 @@
-import { Contact } from "@/types/contact";
+import { Contact, HELP_TROUBLE_BADGE_CLASSES, HELP_TROUBLE_LABELS } from "@/types/contact";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +27,14 @@ export const ContactCard = ({ contact }: ContactCardProps) => {
               )}
             </Avatar>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base sm:text-lg mb-2 truncate">{contact.name}</h3>
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-semibold text-base sm:text-lg truncate">{contact.name}</h3>
+                <Badge
+                  className={`${HELP_TROUBLE_BADGE_CLASSES[contact.helpInTrouble]} text-xs px-2 py-0.5 flex-shrink-0`}
+                >
+                  {HELP_TROUBLE_LABELS[contact.helpInTrouble]}
+                </Badge>
+              </div>
               {contact.tags && contact.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {contact.tags.map((tag) => (
